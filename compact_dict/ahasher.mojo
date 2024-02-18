@@ -1,3 +1,5 @@
+# This code is based on https://github.com/tkaitchuck/aHash
+
 from math.bit import bswap
 from math.math import rotate_bits_left
 from memory.buffer import Buffer

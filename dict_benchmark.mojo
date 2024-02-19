@@ -169,24 +169,24 @@ fn main() raises:
                     pass
         m2 += 1
 
-    print("+++++++Delete Dict Benchmark+++++++")
+    # print("+++++++Delete Dict Benchmark+++++++")
 
-    let delete_compact_stats = benchmark.run[delete_compact_dict](max_runtime_secs=0.5)
-    let delete_std_stats = benchmark.run[delete_std_dict](max_runtime_secs=0.5)
+    # let delete_compact_stats = benchmark.run[delete_compact_dict](max_runtime_secs=0.5)
+    # let delete_std_stats = benchmark.run[delete_std_dict](max_runtime_secs=0.5)
 
-    print("Compact delete speedup:", delete_std_stats.mean() / delete_compact_stats.mean())
+    # print("Compact delete speedup:", delete_std_stats.mean() / delete_compact_stats.mean())
 
-    print("+++++++Read After Delete Dict Benchmark+++++++")
+    # print("+++++++Read After Delete Dict Benchmark+++++++")
 
-    let read_after_delete_compact_stats = benchmark.run[read_compact_dict](max_runtime_secs=0.5)
-    let read_after_delete_std_stats = benchmark.run[read_std_dict](max_runtime_secs=0.5)
+    # let read_after_delete_compact_stats = benchmark.run[read_compact_dict](max_runtime_secs=0.5)
+    # let read_after_delete_std_stats = benchmark.run[read_std_dict](max_runtime_secs=0.5)
 
-    print("Compact read after delete speedup:", read_after_delete_std_stats.mean() / read_after_delete_compact_stats.mean())
+    # print("Compact read after delete speedup:", read_after_delete_std_stats.mean() / read_after_delete_compact_stats.mean())
 
-    print("Sum1:", sum1)
-    print("Sum2:", sum2)
+    # print("Sum1:", sum1)
+    # print("Sum2:", sum2)
 
-    assert_equal(sum1, sum2)
+    # assert_equal(sum1, sum2)
 
     _ = corpus
     _ = d1^

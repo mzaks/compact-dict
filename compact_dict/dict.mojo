@@ -9,6 +9,7 @@ struct Dict[
     hash: fn(String) -> UInt64 = ahash,
     KeyCountType: DType = DType.uint32,
     KeyOffsetType: DType = DType.uint32,
+    non_destructive: Bool = False
 ](Sized):
     var keys: KeysContainer[KeyOffsetType]
     var key_hashes: DTypePointer[KeyCountType]
@@ -37,9 +38,13 @@ struct Dict[
         self.key_hashes = DTypePointer[KeyCountType].alloc(self.capacity)
         self.values = DynamicVector[V](self.capacity)
         self.key_map = DTypePointer[KeyCountType].alloc(self.capacity)
-        self.deleted_mask = DTypePointer[DType.uint8].alloc(self.capacity >> 3)
         memset_zero(self.key_map, self.capacity)
-        memset_zero(self.deleted_mask, self.capacity >> 3)
+        @parameter
+        if non_destructive:
+            self.deleted_mask = DTypePointer[DType.uint8].alloc(0)
+        else:
+            self.deleted_mask = DTypePointer[DType.uint8].alloc(self.capacity >> 3)
+            memset_zero(self.deleted_mask, self.capacity >> 3)
 
     fn __copyinit__(inout self, existing: Self):
         self.count = existing.count
@@ -50,8 +55,12 @@ struct Dict[
         self.values = existing.values
         self.key_map = DTypePointer[KeyCountType].alloc(self.capacity)
         memcpy(self.key_map, existing.key_map, self.capacity)
-        self.deleted_mask = DTypePointer[DType.uint8].alloc(self.capacity >> 3)
-        memcpy(self.deleted_mask, existing.deleted_mask, self.capacity >> 3)
+        @parameter
+        if non_destructive:
+            self.deleted_mask = DTypePointer[DType.uint8].alloc(0)
+        else:
+            self.deleted_mask = DTypePointer[DType.uint8].alloc(self.capacity >> 3)
+            memcpy(self.deleted_mask, existing.deleted_mask, self.capacity >> 3)
 
     fn __moveinit__(inout self, owned existing: Self):
         self.count = existing.count
@@ -92,9 +101,10 @@ struct Dict[
                 let other_key = self.keys[key_index - 1]
                 if eq(other_key, key):
                     self.values[key_index - 1] = value # replace value
-                    if self._is_deleted(key_index - 1):
-                        self.count += 1
-                        self._not_deleted(key_index - 1)
+                    if not non_destructive:
+                        if self._is_deleted(key_index - 1):
+                            self.count += 1
+                            self._not_deleted(key_index - 1)
                     return
             
             key_map_index = (key_map_index + 1) & modulo_mask
@@ -123,7 +133,6 @@ struct Dict[
 
     @always_inline
     fn _rehash(inout self):
-        let old_mask_capacity = self.capacity >> 3
         let old_key_map = self.key_map
         let old_capacity = self.capacity
         self.capacity <<= 1
@@ -132,11 +141,13 @@ struct Dict[
         memset_zero(self.key_map, self.capacity)
         var key_hashes = DTypePointer[KeyCountType].alloc(self.capacity)
         
-        let deleted_mask = DTypePointer[DType.uint8].alloc(mask_capacity)
-        memset_zero(deleted_mask, mask_capacity)
-        memcpy(deleted_mask, self.deleted_mask, old_mask_capacity)
-        self.deleted_mask.free()
-        self.deleted_mask = deleted_mask
+        @parameter
+        if not non_destructive:
+            let deleted_mask = DTypePointer[DType.uint8].alloc(mask_capacity)
+            memset_zero(deleted_mask, mask_capacity)
+            memcpy(deleted_mask, self.deleted_mask, old_capacity >> 3)
+            self.deleted_mask.free()
+            self.deleted_mask = deleted_mask
 
         let modulo_mask = self.capacity - 1
         for i in range(old_capacity):
@@ -175,12 +186,16 @@ struct Dict[
             if key_hash == other_key_hash:
                 let other_key = self.keys[key_index - 1]
                 if eq(other_key, key):
-                    if self._is_deleted(key_index - 1):
-                        return default
+                    if not non_destructive: 
+                        if self._is_deleted(key_index - 1):
+                            return default
                     return self.values[key_index - 1]
             key_map_index = (key_map_index + 1) & modulo_mask
 
     fn delete(inout self, key: String):
+        @parameter
+        if non_destructive:
+            return
         let key_hash = hash(key).cast[KeyCountType]()
         let modulo_mask = self.capacity - 1
 

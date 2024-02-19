@@ -27,7 +27,7 @@ fn test_simple_manipulations() raises:
     assert_equal(len(d), 144)
 
 fn test_simple_manipulations_on_non_destructive() raises:
-    var d = Dict[Int, KeyCountType=DType.uint8, KeyOffsetType=DType.uint16,  non_destructive=True]()
+    var d = Dict[Int, KeyCountType=DType.uint8, KeyOffsetType=DType.uint16, destructive=False]()
     let corpus = s3_action_names()
     for i in range(len(corpus)):
         d.put(corpus[i], i)

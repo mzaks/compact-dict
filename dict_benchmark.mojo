@@ -90,8 +90,9 @@ fn corpus_stats(corpus: DynamicVector[String]):
 fn main() raises:
     var d1 = Dict[Int]()
     var d2 = StdDict[StringKey, Int]()
-    var corpus = french_text_to_keys()
-
+    var corpus = system_words_collection()
+    
+    print("")
     corpus_stats(corpus)
 
     @parameter
@@ -129,7 +130,7 @@ fn main() raises:
     # d1.keys.print_keys()
     print("+++++++Read Dict Benchmark+++++++")
     let read_compact_stats = benchmark.run[read_compact_dict](max_runtime_secs=0.5)
-    print("Compact sum1:", sum1)
+    print("Sum1:", sum1)
     # read_compact_stats.print("ns")
 
     var sum2 = 0
@@ -144,11 +145,49 @@ fn main() raises:
 
     let raed_std_stats = benchmark.run[read_std_dict](max_runtime_secs=0.5)
     # raed_std_stats.print("ns")
-    print("Compact sum2:", sum2)
+    print("Sum2:", sum2)
     print("Compact read speedup:", raed_std_stats.mean() / read_compact_stats.mean())
     
     assert_equal(sum1, sum2)
-    
+
+    var m1 = 99
+    @parameter
+    fn delete_compact_dict():
+        for i in range(len(corpus)):
+            if i % m1 == 0:
+                d1.delete(corpus[i])
+        m1 += 1
+
+    var m2 = 99
+    @parameter
+    fn delete_std_dict():
+        for i in range(len(corpus)):
+            if i % m2 == 0:
+                try:
+                    _ = d2.pop(corpus[i])
+                except:
+                    pass
+        m2 += 1
+
+    print("+++++++Delete Dict Benchmark+++++++")
+
+    let delete_compact_stats = benchmark.run[delete_compact_dict](max_runtime_secs=0.5)
+    let delete_std_stats = benchmark.run[delete_std_dict](max_runtime_secs=0.5)
+
+    print("Compact delete speedup:", delete_std_stats.mean() / delete_compact_stats.mean())
+
+    print("+++++++Read After Delete Dict Benchmark+++++++")
+
+    let read_after_delete_compact_stats = benchmark.run[read_compact_dict](max_runtime_secs=0.5)
+    let read_after_delete_std_stats = benchmark.run[read_std_dict](max_runtime_secs=0.5)
+
+    print("Compact read after delete speedup:", read_after_delete_std_stats.mean() / read_after_delete_compact_stats.mean())
+
+    print("Sum1:", sum1)
+    print("Sum2:", sum2)
+
+    assert_equal(sum1, sum2)
+
     _ = corpus
     _ = d1^
     _ = d2^

@@ -9,7 +9,7 @@ struct Dict[
     hash: fn(String) -> UInt64 = ahash,
     KeyCountType: DType = DType.uint32,
     KeyOffsetType: DType = DType.uint32,
-]:
+](Sized):
     var keys: KeysContainer[KeyOffsetType]
     var key_hashes: DTypePointer[KeyCountType]
     var values: DynamicVector[V]
@@ -66,6 +66,9 @@ struct Dict[
         self.key_map.free()
         self.deleted_mask.free()
         self.key_hashes.free()
+
+    fn __len__(self) -> Int:
+        return self.count
 
     fn put(inout self, key: String, value: V):
         if self.count / self.capacity >= 0.87:

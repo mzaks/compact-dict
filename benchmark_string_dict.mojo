@@ -51,15 +51,15 @@ fn corpus_stats(corpus: DynamicVector[String]):
 fn main() raises:
     var d1 = Dict[Int]()
     var d2 = StdDict[StringKey, Int]()
-    var corpus = system_words_collection()
+    var corpus = french_text_to_keys()
     
     print("")
     corpus_stats(corpus)
 
     @parameter
     fn build_compact_dict():
-        # var d = Dict[Int](len(corpus))
-        var d = Dict[Int]()
+        var d = Dict[Int](len(corpus))
+        # var d = Dict[Int]()
         for i in range(len(corpus)):
             d.put(corpus[i], i)
         d1 = d^

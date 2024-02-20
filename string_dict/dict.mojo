@@ -132,13 +132,13 @@ struct Dict[
 
     @always_inline
     fn _is_deleted(self, index: Int) -> Bool:
-        let offset = index // 8
+        let offset = index >> 3
         let bit_index = index & 7
         return self.deleted_mask.offset(offset).load() & (1 << bit_index) != 0
 
     @always_inline
     fn _deleted(self, index: Int):
-        let offset = index // 8
+        let offset = index >> 3
         let bit_index = index & 7
         let p = self.deleted_mask.offset(offset)
         let mask = p.load()
@@ -146,7 +146,7 @@ struct Dict[
     
     @always_inline
     fn _not_deleted(self, index: Int):
-        let offset = index // 8
+        let offset = index >> 3
         let bit_index = index & 7
         let p = self.deleted_mask.offset(offset)
         let mask = p.load()

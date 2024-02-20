@@ -1,5 +1,5 @@
 import benchmark
-from compact_dict import Dict
+from generic_dict import Dict, Keyable, KeysBuilder
 from collections.dict import KeyElement, Dict as StdDict
 from pathlib import cwd
 from testing import assert_equal
@@ -8,7 +8,7 @@ from corpora import *
 
 
 @value
-struct StringKey(KeyElement):
+struct StringKey(KeyElement, Keyable):
     var s: String
 
     fn __init__(inout self, owned s: String):
@@ -23,6 +23,9 @@ struct StringKey(KeyElement):
 
     fn __eq__(self, other: Self) -> Bool:
         return self.s == other.s
+
+    fn accept[T: KeysBuilder](self, inout keys_builder: T):
+        keys_builder.add_buffer(self.s._as_ptr(), len(self.s))
 
 fn corpus_stats(corpus: DynamicVector[String]):
     print("=======Corpus Stats=======")
@@ -61,7 +64,10 @@ fn main() raises:
         # var d = Dict[Int](len(corpus))
         var d = Dict[Int]()
         for i in range(len(corpus)):
-            d.put(corpus[i], i)
+            try:
+                d.put(StringKey(corpus[i]), i)
+            except:
+                print("!!!")
         d1 = d^
 
     @parameter
@@ -85,7 +91,10 @@ fn main() raises:
     fn read_compact_dict():
         sum1 = 0
         for i in range(len(corpus)):
-            sum1 += d1.get(corpus[i], -1)
+            try:
+                sum1 += d1.get(StringKey(corpus[i]), -1)
+            except:
+                print("!!!!!")
 
     # d1.keys.print_keys()
     print("+++++++Read Dict Benchmark+++++++")
@@ -116,7 +125,10 @@ fn main() raises:
     fn delete_compact_dict():
         for i in range(len(corpus)):
             if i % m1 == 0:
-                d1.delete(corpus[i])
+                try:
+                    d1.delete(corpus[i])
+                except:
+                    print("!!!!!!!!!!!!!!")
         m1 += 1
 
     var m2 = 99

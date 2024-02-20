@@ -1,4 +1,4 @@
-from compact_dict import Dict
+from string_dict import Dict
 from testing import assert_equal
 
 from corpora import *

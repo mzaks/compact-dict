@@ -6,7 +6,7 @@ struct SingleKeyBuilder(KeysBuilder):
     var allocated_bytes: Int
     var key_size: Int
 
-    fn __init__(inout self, bytes: Int = 256):
+    fn __init__(inout self, bytes: Int = 64):
         self.allocated_bytes = bytes
         self.key = DTypePointer[DType.uint8].alloc(self.allocated_bytes)
         self.key_size = 0

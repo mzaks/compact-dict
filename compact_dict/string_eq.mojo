@@ -8,7 +8,8 @@ fn eq(a: StringRef, b: String) -> Bool:
     var offset = 0
     alias step = 16
     while l - offset >= step:
-        if p1.simd_load[step](offset) != p2.simd_load[step](offset):
+        let unequal = p1.simd_load[step](offset) != p2.simd_load[step](offset)
+        if unequal.reduce_or():
             return False
         offset += step
     while l - offset > 0:

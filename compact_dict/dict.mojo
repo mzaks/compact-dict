@@ -9,7 +9,8 @@ struct Dict[
     hash: fn(String) -> UInt64 = ahash,
     KeyCountType: DType = DType.uint32,
     KeyOffsetType: DType = DType.uint32,
-    destructive: Bool = True
+    destructive: Bool = True,
+    caching_hashes: Bool = True,
 ](Sized):
     var keys: KeysContainer[KeyOffsetType]
     var key_hashes: DTypePointer[KeyCountType]
@@ -35,7 +36,11 @@ struct Dict[
             self.capacity = capacity if ctpop(icapacity) == 1 else
                             1 << (bit_length(icapacity)).to_int()
         self.keys = KeysContainer[KeyOffsetType](capacity)
-        self.key_hashes = DTypePointer[KeyCountType].alloc(self.capacity)
+        @parameter
+        if caching_hashes:
+            self.key_hashes = DTypePointer[KeyCountType].alloc(self.capacity)
+        else:
+            self.key_hashes = DTypePointer[KeyCountType].alloc(0)
         self.values = DynamicVector[V](self.capacity)
         self.key_map = DTypePointer[KeyCountType].alloc(self.capacity)
         memset_zero(self.key_map, self.capacity)
@@ -50,8 +55,12 @@ struct Dict[
         self.count = existing.count
         self.capacity = existing.capacity
         self.keys = existing.keys
-        self.key_hashes = DTypePointer[KeyCountType].alloc(self.capacity)
-        memcpy(self.key_hashes, existing.key_hashes, self.capacity)
+        @parameter
+        if caching_hashes:
+            self.key_hashes = DTypePointer[KeyCountType].alloc(self.capacity)
+            memcpy(self.key_hashes, existing.key_hashes, self.capacity)
+        else:
+            self.key_hashes = DTypePointer[KeyCountType].alloc(0)
         self.values = existing.values
         self.key_map = DTypePointer[KeyCountType].alloc(self.capacity)
         memcpy(self.key_map, existing.key_map, self.capacity)
@@ -90,14 +99,26 @@ struct Dict[
             let key_index = self.key_map.load(key_map_index).to_int()
             if key_index == 0:
                 self.keys.add(key)
-                self.key_hashes.store(key_map_index, key_hash)
+                @parameter
+                if caching_hashes:
+                    self.key_hashes.store(key_map_index, key_hash)
                 self.values.push_back(value)
                 self.count += 1
                 self.key_map.store(key_map_index, SIMD[KeyCountType, 1](self.keys.count))
                 return
-
-            let other_key_hash = self.key_hashes[key_map_index]
-            if other_key_hash == key_hash:
+            @parameter
+            if caching_hashes:
+                let other_key_hash = self.key_hashes[key_map_index]
+                if other_key_hash == key_hash:
+                    let other_key = self.keys[key_index - 1]
+                    if eq(other_key, key):
+                        self.values[key_index - 1] = value # replace value
+                        if destructive:
+                            if self._is_deleted(key_index - 1):
+                                self.count += 1
+                                self._not_deleted(key_index - 1)
+                        return
+            else:
                 let other_key = self.keys[key_index - 1]
                 if eq(other_key, key):
                     self.values[key_index - 1] = value # replace value
@@ -139,8 +160,12 @@ struct Dict[
         let mask_capacity = self.capacity >> 3
         self.key_map = DTypePointer[KeyCountType].alloc(self.capacity)
         memset_zero(self.key_map, self.capacity)
-        var key_hashes = DTypePointer[KeyCountType].alloc(self.capacity)
         
+        var key_hashes = self.key_hashes
+        @parameter
+        if caching_hashes:
+            key_hashes = DTypePointer[KeyCountType].alloc(self.capacity)
+            
         @parameter
         if destructive:
             let deleted_mask = DTypePointer[DType.uint8].alloc(mask_capacity)
@@ -151,7 +176,14 @@ struct Dict[
 
         let modulo_mask = self.capacity - 1
         for i in range(old_capacity):
-            let key_hash = self.key_hashes[i]
+            if old_key_map[i] == 0:
+                continue
+            var key_hash = SIMD[KeyCountType, 1](0)
+            @parameter
+            if caching_hashes:
+                key_hash = self.key_hashes[i]
+            else:
+                key_hash = hash(self.keys[(old_key_map[i] - 1).to_int()]).cast[KeyCountType]()
 
             var key_map_index = (key_hash & modulo_mask).to_int()
 
@@ -164,13 +196,15 @@ struct Dict[
                     searching = False
                 else:
                     key_map_index = (key_map_index + 1) & modulo_mask
-            
-            key_hashes[key_map_index] = key_hash  
+            @parameter
+            if caching_hashes:
+                key_hashes[key_map_index] = key_hash  
         
-        self.key_hashes.free()
-        self.key_hashes = key_hashes
+        @parameter
+        if caching_hashes:
+            self.key_hashes.free()
+            self.key_hashes = key_hashes
         old_key_map.free()
-        # self.debug()
 
     fn get(self, key: String, default: V) -> V:
         let key_hash = hash(key).cast[KeyCountType]()
@@ -178,18 +212,28 @@ struct Dict[
 
         var key_map_index = (key_hash & modulo_mask).to_int()
         while True:
-            let key_index = self.key_map.offset(key_map_index).load().to_int()
+            let key_index = self.key_map.load(key_map_index).to_int()
             if key_index == 0:
                 return default
             
-            let other_key_hash = self.key_hashes[key_map_index]
-            if key_hash == other_key_hash:
+            @parameter
+            if caching_hashes:
+                let other_key_hash = self.key_hashes[key_map_index]
+                if key_hash == other_key_hash:
+                    let other_key = self.keys[key_index - 1]
+                    if eq(other_key, key):
+                        if destructive: 
+                            if self._is_deleted(key_index - 1):
+                                return default
+                        return self.values[key_index - 1]
+            else:
                 let other_key = self.keys[key_index - 1]
                 if eq(other_key, key):
                     if destructive: 
                         if self._is_deleted(key_index - 1):
                             return default
                     return self.values[key_index - 1]
+            
             key_map_index = (key_map_index + 1) & modulo_mask
 
     fn delete(inout self, key: String):
@@ -201,17 +245,29 @@ struct Dict[
 
         var key_map_index = (key_hash & modulo_mask).to_int()
         while True:
-            let key_index = self.key_map.offset(key_map_index).load().to_int()
+            let key_index = self.key_map.load(key_map_index).to_int()
             if key_index == 0:
                 return
-            let other_key_hash = self.key_hashes[key_map_index]
-            if key_hash == other_key_hash:
+            @parameter
+            if caching_hashes:
+                let other_key_hash = self.key_hashes[key_map_index]
+                if key_hash == other_key_hash:
+                    let other_key = self.keys[key_index - 1]
+                    if eq(other_key, key):
+                        if not self._is_deleted(key_index - 1):
+                            self.count -= 1
+                        self._deleted(key_index - 1)
+                        return
+            else:
                 let other_key = self.keys[key_index - 1]
                 if eq(other_key, key):
-                    self.count -= 1
-                    return self._deleted(key_index - 1)
-            
-            key_map_index = (key_map_index + 1) & modulo_mask    
+                    # if String(other_key) != key:
+                        # print("!!!!", key, other_key)
+                    if not self._is_deleted(key_index - 1):
+                        self.count -= 1
+                    self._deleted(key_index - 1)
+                    return
+            key_map_index = (key_map_index + 1) & modulo_mask
 
     fn debug(self):
         print("Dict count:", self.count, "and capacity:", self.capacity)
@@ -224,13 +280,15 @@ struct Dict[
                 print("")
         print("Keys:")
         self.keys.print_keys()
-        print("KeyHashes:")
-        for i in range(self.capacity):
-            if self.key_map.load(i) > 0:
-                print_no_newline(self.key_hashes.load(i))
-            else:
-                print_no_newline(0)
-            if i < self.capacity - 1:
-                    print_no_newline(", ")
-            else:
-                print("")
+        @parameter
+        if caching_hashes:
+            print("KeyHashes:")
+            for i in range(self.capacity):
+                if self.key_map.load(i) > 0:
+                    print_no_newline(self.key_hashes.load(i))
+                else:
+                    print_no_newline(0)
+                if i < self.capacity - 1:
+                        print_no_newline(", ")
+                else:
+                    print("")

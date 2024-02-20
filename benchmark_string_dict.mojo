@@ -51,7 +51,7 @@ fn corpus_stats(corpus: DynamicVector[String]):
 fn main() raises:
     var d1 = Dict[Int]()
     var d2 = StdDict[StringKey, Int]()
-    var corpus = french_text_to_keys()
+    var corpus = system_words_collection()
     
     print("")
     corpus_stats(corpus)
@@ -111,24 +111,21 @@ fn main() raises:
     assert_equal(sum1, sum2)
     assert_equal(len(d1), len(d2))
 
-    var m1 = 99
+    var m = 9
     @parameter
     fn delete_compact_dict():
         for i in range(len(corpus)):
-            if i % m1 == 0:
+            if i % m == 0:
                 d1.delete(corpus[i])
-        m1 += 1
 
-    var m2 = 99
     @parameter
     fn delete_std_dict():
         for i in range(len(corpus)):
-            if i % m2 == 0:
+            if i % m == 0:
                 try:
                     _ = d2.pop(corpus[i])
                 except:
                     pass
-        m2 += 1
 
     print("+++++++Delete Dict Benchmark+++++++")
 

@@ -73,6 +73,7 @@ struct SparseArray[T: DType]:
             return None
         return self.values.load(self._value_index(offset, bit_index))
 
+    @always_inline
     fn _value_index(self, offset: Int, bit_index: Int) -> Int:
         
         if not self.__contains__(offset, bit_index):

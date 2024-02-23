@@ -20,6 +20,7 @@ struct Dict[
     var deleted_mask: DTypePointer[DType.uint8]
     var count: Int
     var capacity: Int
+    var key_builder: SingleKeyBuilder
 
     fn __init__(inout self, capacity: Int = 16):
         constrained[
@@ -37,6 +38,7 @@ struct Dict[
             self.capacity = capacity if ctpop(icapacity) == 1 else
                             1 << (bit_length(icapacity)).to_int()
         self.keys = KeysContainer[KeyOffsetType](capacity)
+        self.key_builder = SingleKeyBuilder()
         @parameter
         if caching_hashes:
             self.key_hashes = DTypePointer[KeyCountType].alloc(self.capacity)
@@ -56,6 +58,7 @@ struct Dict[
         self.count = existing.count
         self.capacity = existing.capacity
         self.keys = existing.keys
+        self.key_builder = self.key_builder
         @parameter
         if caching_hashes:
             self.key_hashes = DTypePointer[KeyCountType].alloc(self.capacity)
@@ -76,6 +79,7 @@ struct Dict[
         self.count = existing.count
         self.capacity = existing.capacity
         self.keys = existing.keys^
+        self.key_builder = existing.key_builder^
         self.key_hashes = existing.key_hashes
         self.values = existing.values^
         self.key_map = existing.key_map
@@ -88,6 +92,16 @@ struct Dict[
 
     fn __len__(self) -> Int:
         return self.count
+
+    @always_inline
+    fn __contains__[T: Keyable](inout self, key: T) -> Bool:
+        try:
+            self.key_builder.reset()
+            key.accept(self.key_builder)
+            let key_ref = self.key_builder.get_key()
+            return self._find_key_index(key_ref) != 0
+        except:
+            return False
 
     fn put[T: Keyable](inout self, key: T, value: V) raises:
         if self.count / self.capacity >= 0.87:
@@ -117,6 +131,7 @@ struct Dict[
                     if eq(other_key, key_ref):
                         self.values[key_index - 1] = value # replace value
                         self.keys.drop_last()
+                        @parameter
                         if destructive:
                             if self._is_deleted(key_index - 1):
                                 self.count += 1
@@ -127,6 +142,7 @@ struct Dict[
                 if eq(other_key, key_ref):
                     self.values[key_index - 1] = value # replace value
                     self.keys.drop_last()
+                    @parameter
                     if destructive:
                         if self._is_deleted(key_index - 1):
                             self.count += 1
@@ -211,73 +227,54 @@ struct Dict[
             self.key_hashes = key_hashes
         old_key_map.free()
 
-    fn get[T: Keyable](self, key: T, default: V) raises -> V:
-        var keys = SingleKeyBuilder()
-        key.accept(keys)
-        let key_ref = keys.get_key()
-        let key_hash = hash(key_ref).cast[KeyCountType]()
-        let modulo_mask = self.capacity - 1
-
-        var key_map_index = (key_hash & modulo_mask).to_int()
-        while True:
-            let key_index = self.key_map.load(key_map_index).to_int()
-            if key_index == 0:
+    @always_inline
+    fn get[T: Keyable](inout self, key: T, default: V) raises -> V:
+        self.key_builder.reset()
+        key.accept(self.key_builder)
+        let key_ref = self.key_builder.get_key()
+        let key_index = self._find_key_index(key_ref)
+        if key_index == 0:
+            return default
+        @parameter
+        if destructive: 
+            if self._is_deleted(key_index - 1):
                 return default
-            
-            @parameter
-            if caching_hashes:
-                let other_key_hash = self.key_hashes[key_map_index]
-                if key_hash == other_key_hash:
-                    let other_key = self.keys[key_index - 1]
-                    if eq(other_key, key_ref):
-                        if destructive: 
-                            if self._is_deleted(key_index - 1):
-                                return default
-                        return self.values[key_index - 1]
-            else:
-                let other_key = self.keys[key_index - 1]
-                if eq(other_key, key_ref):
-                    if destructive: 
-                        if self._is_deleted(key_index - 1):
-                            return default
-                    return self.values[key_index - 1]
-            
-            key_map_index = (key_map_index + 1) & modulo_mask
-            _ = keys
+        return self.values[key_index - 1]        
 
-    fn delete(inout self, key: String) raises:
+    fn delete[T: Keyable](inout self, key: T) raises:
         @parameter
         if not destructive:
             return
-        
-        let key_ref = KeyRef(key._as_ptr().bitcast[DType.uint8](), len(key))
+
+        self.key_builder.reset()
+        key.accept(self.key_builder)
+        let key_ref = self.key_builder.get_key()
+        let key_index = self._find_key_index(key_ref)
+        if key_index == 0:
+            return
+        if not self._is_deleted(key_index - 1):
+            self.count -= 1
+        self._deleted(key_index - 1)
+
+    fn _find_key_index(self, key_ref: KeyRef) raises -> Int:
         let key_hash = hash(key_ref).cast[KeyCountType]()
         let modulo_mask = self.capacity - 1
-
         var key_map_index = (key_hash & modulo_mask).to_int()
         while True:
             let key_index = self.key_map.load(key_map_index).to_int()
             if key_index == 0:
-                return
+                return key_index
             @parameter
             if caching_hashes:
                 let other_key_hash = self.key_hashes[key_map_index]
                 if key_hash == other_key_hash:
                     let other_key = self.keys[key_index - 1]
                     if eq(other_key, key_ref):
-                        if not self._is_deleted(key_index - 1):
-                            self.count -= 1
-                        self._deleted(key_index - 1)
-                        return
+                        return key_index
             else:
                 let other_key = self.keys[key_index - 1]
                 if eq(other_key, key_ref):
-                    # if String(other_key) != key:
-                        # print("!!!!", key, other_key)
-                    if not self._is_deleted(key_index - 1):
-                        self.count -= 1
-                    self._deleted(key_index - 1)
-                    return
+                    return key_index
             key_map_index = (key_map_index + 1) & modulo_mask
 
     fn debug(self) raises:

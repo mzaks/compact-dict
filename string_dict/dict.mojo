@@ -88,6 +88,10 @@ struct Dict[
     fn __len__(self) -> Int:
         return self.count
 
+    @always_inline
+    fn __contains__(inout self, key: String) -> Bool:
+        return self._find_key_index(key) != 0
+
     fn put(inout self, key: String, value: V):
         if self.count / self.capacity >= 0.87:
             self._rehash()
@@ -207,39 +211,30 @@ struct Dict[
         old_key_map.free()
 
     fn get(self, key: String, default: V) -> V:
-        let key_hash = hash(key).cast[KeyCountType]()
-        let modulo_mask = self.capacity - 1
+        let key_index = self._find_key_index(key)
+        if key_index == 0:
+            return default
 
-        var key_map_index = (key_hash & modulo_mask).to_int()
-        while True:
-            let key_index = self.key_map.load(key_map_index).to_int()
-            if key_index == 0:
+        @parameter
+        if destructive: 
+            if self._is_deleted(key_index - 1):
                 return default
-            
-            @parameter
-            if caching_hashes:
-                let other_key_hash = self.key_hashes[key_map_index]
-                if key_hash == other_key_hash:
-                    let other_key = self.keys[key_index - 1]
-                    if eq(other_key, key):
-                        if destructive: 
-                            if self._is_deleted(key_index - 1):
-                                return default
-                        return self.values[key_index - 1]
-            else:
-                let other_key = self.keys[key_index - 1]
-                if eq(other_key, key):
-                    if destructive: 
-                        if self._is_deleted(key_index - 1):
-                            return default
-                    return self.values[key_index - 1]
-            
-            key_map_index = (key_map_index + 1) & modulo_mask
+        return self.values[key_index - 1]
 
     fn delete(inout self, key: String):
         @parameter
         if not destructive:
             return
+
+        let key_index = self._find_key_index(key)
+        if key_index == 0:
+                return
+        if not self._is_deleted(key_index - 1):
+            self.count -= 1
+        self._deleted(key_index - 1)
+
+    @always_inline
+    fn _find_key_index(self, key: String) -> Int:
         let key_hash = hash(key).cast[KeyCountType]()
         let modulo_mask = self.capacity - 1
 
@@ -247,26 +242,20 @@ struct Dict[
         while True:
             let key_index = self.key_map.load(key_map_index).to_int()
             if key_index == 0:
-                return
+                return key_index
+            
             @parameter
             if caching_hashes:
                 let other_key_hash = self.key_hashes[key_map_index]
                 if key_hash == other_key_hash:
                     let other_key = self.keys[key_index - 1]
                     if eq(other_key, key):
-                        if not self._is_deleted(key_index - 1):
-                            self.count -= 1
-                        self._deleted(key_index - 1)
-                        return
+                        return key_index
             else:
                 let other_key = self.keys[key_index - 1]
                 if eq(other_key, key):
-                    # if String(other_key) != key:
-                        # print("!!!!", key, other_key)
-                    if not self._is_deleted(key_index - 1):
-                        self.count -= 1
-                    self._deleted(key_index - 1)
-                    return
+                    return key_index
+            
             key_map_index = (key_map_index + 1) & modulo_mask
 
     fn debug(self):

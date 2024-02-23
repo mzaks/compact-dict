@@ -67,3 +67,7 @@ struct SingleKeyBuilder(KeysBuilder):
     @always_inline
     fn get_key(self) -> KeyRef:
         return KeyRef(self.key, self.key_size)
+
+    @always_inline
+    fn reset(inout self):
+        self.key_size = 0

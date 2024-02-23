@@ -126,7 +126,7 @@ fn main() raises:
         for i in range(len(corpus)):
             if i % m == 0:
                 try:
-                    d1.delete(corpus[i])
+                    d1.delete(StringKey(corpus[i]))
                 except:
                     print("!!!!!!!!!!!!!!")
 

@@ -12,7 +12,7 @@ Both modules expose a `Dict` struct which have following compile time parametris
 - By setting the `KeyCountType` to a lower unsigned DType e.g. (`DType.uint8` or `DType.uint16`) we can reduce the memory footprint. The type needs to be able to represent number of keys
 - By setting the `KeyOffsetType` to a lower unsigned DType we can reduce the memory footprint even further. The type needs to be able to represent the sum of all key bytes
 - Set `destructive` to `False` if you don't intend to delete keys from the dict. This way we do not waste space for deleted flags
-- Set `caching_hashes` to `False` in order to reduce memory footprint by not caching the hash values. Keep in mind that this change slows down the the rehashing process
+- Set `caching_hashes` to `False` in order to reduce memory footprint by not caching the hash values. Keep in mind that this change slows down the rehashing process
 
 The `Dict` can be instatiated with a `capacity` value. Deafult is set to 16, min capacity is 8. If you know the number of elements ahead of time set it, this will avoid rehashing and might improve memory footprint.
 

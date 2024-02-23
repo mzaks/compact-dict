@@ -42,7 +42,7 @@ struct Dict[
             self.key_hashes = DTypePointer[KeyCountType].alloc(self.capacity)
         else:
             self.key_hashes = DTypePointer[KeyCountType].alloc(0)
-        self.values = DynamicVector[V](self.capacity)
+        self.values = DynamicVector[V](capacity)
         self.key_map = DTypePointer[KeyCountType].alloc(self.capacity)
         memset_zero(self.key_map, self.capacity)
         @parameter

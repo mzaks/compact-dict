@@ -1,3 +1,4 @@
+from collections import Optional
 from math.bit import ctpop
 from tensor import Tensor, TensorSpec
 
@@ -64,6 +65,13 @@ struct SparseArray[T: DType]:
             self.values.store(i, self.values.load(i-1))
         self.values.store(value_index, value)
         self.values_count += 1
+
+    fn get(self, index: Int) -> Optional[SIMD[T, 1]]:
+        let offset = index >> 3
+        let bit_index = index & 7
+        if not self.__contains__(offset, bit_index):
+            return None
+        return self.values.load(self._value_index(offset, bit_index))
 
     fn _value_index(self, offset: Int, bit_index: Int) -> Int:
         

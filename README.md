@@ -1,12 +1,12 @@
-`compact-dict` is a fast hashmap based dictionary implemnted in Mojo 🔥.
+`compact-dict` is a fast hashmap based dictionary implemented in Mojo 🔥.
 
 Although the dictionary is fast (currently it is about 10x faster than the std `Dict`) its main concern is with reducing memory footprint.
 
 We introduce two self sufficient modules:
 - `string_dict` where the key type of the dictionary is a `String`
-- `geneic_dict` which allows keys to be of any type conforming with `Keyable` trait
+- `generic_dict` which allows keys to be of any type conforming with `Keyable` trait
 
-Both modules expose a `Dict` struct which have following compile time parametrisation options:
+Both modules expose a `Dict` struct which has the following compile time parametrization options:
 - Value type can be any type conforming with `CollectionElement` trait
 - We use a fast hash function as default, but you can provide your own hash function
 - By setting the `KeyCountType` to a lower unsigned DType e.g. (`DType.uint8` or `DType.uint16`) we can reduce the memory footprint. The type needs to be able to represent number of keys
@@ -14,7 +14,7 @@ Both modules expose a `Dict` struct which have following compile time parametris
 - Set `destructive` to `False` if you don't intend to delete keys from the dict. This way we do not waste space for deleted flags
 - Set `caching_hashes` to `False` in order to reduce memory footprint by not caching the hash values. Keep in mind that this change slows down the rehashing process
 
-The `Dict` can be instatiated with a `capacity` value. Deafult is set to 16, min capacity is 8. If you know the number of elements ahead of time set it, this will avoid rehashing and might improve memory footprint.
+The `Dict` can be instantiated with a `capacity` value. Default is set to 16, min capacity is 8. If you know the number of elements ahead of time set it, this will avoid rehashing and might improve memory footprint.
 
 ### Sample code for generic dict:
 ```

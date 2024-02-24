@@ -9,13 +9,30 @@ struct SparseArray[T: DType]:
     var values_count: Int
     var values_capacity: Int
 
-    fn __init__(inout self, capacity: Int):
-        self.mask_size = -(-capacity >> 3)
+    fn __init__(inout self, capacity: Int = 8):
+        var _capacity = capacity if capacity >= 8 else 8
+        self.mask_size = -(-_capacity >> 3)
         self.mask = DTypePointer[DType.uint8].alloc(self.mask_size)
         memset_zero(self.mask, self.mask_size)
         self.values_capacity = 4
         self.values_count = 0
         self.values = DTypePointer[T].alloc(self.values_capacity)
+
+    fn __copyinit__(inout self, existing: Self):
+        self.mask_size = existing.mask_size
+        self.values_count = existing.values_count
+        self.values_capacity = existing.values_capacity
+        self.mask = DTypePointer[DType.uint8].alloc(self.mask_size)
+        memcpy(self.mask, existing.mask, self.mask_size)
+        self.values = DTypePointer[T].alloc(self.values_capacity)
+        memcpy(self.values, existing.values, self.values_count)
+
+    fn __moveinit__(inout self, owned existing: Self):
+        self.mask_size = existing.mask_size
+        self.values_count = existing.values_count
+        self.values_capacity = existing.values_capacity
+        self.mask = existing.mask
+        self.values = existing.values
 
     fn __del__(owned self):
         self.mask.free()
@@ -25,11 +42,11 @@ struct SparseArray[T: DType]:
     fn __contains__(self, index: Int) -> Bool:
         let offset = index >> 3
         let bit_index = index & 7
-        return self.mask.load(offset) & (1 << bit_index) != 0
+        return self.__contains__(offset, bit_index)
 
     @always_inline
     fn __contains__(self, offset: Int, bit_index: Int) -> Bool:
-        return self.mask.load(offset) & (1 << bit_index) != 0
+        return offset < self.mask_size and self.mask.load(offset) & (1 << bit_index) != 0
 
     fn __setitem__(inout self, index: Int, value: SIMD[T, 1]):
         let offset = index >> 3

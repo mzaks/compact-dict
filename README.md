@@ -54,3 +54,7 @@ fn test_person_dict() raises:
     assert_equal(d.get(p6, 0), 111111)
 
 ```
+
+### Note:
+Due to a bug in Mojo 24.1 `generic_dict` module does not compile
+Bug report https://github.com/modularml/mojo/issues/1858 

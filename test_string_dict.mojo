@@ -5,7 +5,7 @@ from corpora import *
 
 fn test_simple_manipulations() raises:
     var d = Dict[Int, KeyCountType=DType.uint8, KeyOffsetType=DType.uint16]()
-    let corpus = s3_action_names()
+    var corpus = s3_action_names()
     for i in range(len(corpus)):
         d.put(corpus[i], i)
     
@@ -29,7 +29,7 @@ fn test_simple_manipulations() raises:
 
 fn test_simple_manipulations_on_non_destructive() raises:
     var d = Dict[Int, KeyCountType=DType.uint8, KeyOffsetType=DType.uint16, destructive=False]()
-    let corpus = s3_action_names()
+    var corpus = s3_action_names()
     for i in range(len(corpus)):
         d.put(corpus[i], i)
     
@@ -56,7 +56,7 @@ fn test_simple_manipulations_non_caching() raises:
         KeyOffsetType=DType.uint16, 
         caching_hashes=False
     ]()
-    let corpus = s3_action_names()
+    var corpus = s3_action_names()
     for i in range(len(corpus)):
         d.put(corpus[i], i)
     assert_equal(len(d), 143)

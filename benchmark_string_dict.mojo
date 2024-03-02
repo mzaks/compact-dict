@@ -18,7 +18,7 @@ struct StringKey(KeyElement):
         self.s = String(s)
 
     fn __hash__(self) -> Int:
-        let ptr = self.s._as_ptr()
+        var ptr = self.s._as_ptr()
         return hash(ptr, len(self.s))
 
     fn __eq__(self, other: Self) -> Bool:
@@ -32,7 +32,7 @@ fn corpus_stats(corpus: DynamicVector[String]):
     var sum = 0
     var count = 0
     for i in range(len(corpus)):
-        let key = corpus[i]
+        var key = corpus[i]
         if len(key) == 0:
             continue
         count += 1
@@ -41,7 +41,7 @@ fn corpus_stats(corpus: DynamicVector[String]):
             min = len(key)
         if max < len(key):
             max = len(key)
-    let avg = sum / count
+    var avg = sum / count
     print("Min key lenght:", min)
     print("Avg key length:", avg)
     print("Max key length:", max)
@@ -73,10 +73,10 @@ fn main() raises:
 
     print("+++++++Create Dict Benchmark+++++++")
 
-    let build_compact_stats = benchmark.run[build_compact_dict](max_runtime_secs=0.5)
+    var build_compact_stats = benchmark.run[build_compact_dict](max_runtime_secs=0.5)
     # build_compact_stats.print("ns")
 
-    let build_std_stats = benchmark.run[build_std_dict](max_runtime_secs=0.5)
+    var build_std_stats = benchmark.run[build_std_dict](max_runtime_secs=0.5)
     # build_std_stats.print("ns")
 
     print("Compact build speedup:", build_std_stats.mean() / build_compact_stats.mean())
@@ -89,7 +89,7 @@ fn main() raises:
 
     # d1.keys.print_keys()
     print("+++++++Read Dict Benchmark+++++++")
-    let read_compact_stats = benchmark.run[read_compact_dict](max_runtime_secs=0.5)
+    var read_compact_stats = benchmark.run[read_compact_dict](max_runtime_secs=0.5)
     print("Sum1:", sum1, len(d1))
     # read_compact_stats.print("ns")
 
@@ -103,7 +103,7 @@ fn main() raises:
             except:
                 sum2 += -1
 
-    let raed_std_stats = benchmark.run[read_std_dict](max_runtime_secs=0.5)
+    var raed_std_stats = benchmark.run[read_std_dict](max_runtime_secs=0.5)
     # raed_std_stats.print("ns")
     print("Sum2:", sum2, len(d2))
     print("Compact read speedup:", raed_std_stats.mean() / read_compact_stats.mean())
@@ -129,15 +129,15 @@ fn main() raises:
 
     print("+++++++Delete Dict Benchmark+++++++")
 
-    let delete_compact_stats = benchmark.run[delete_compact_dict](max_runtime_secs=0.5)
-    let delete_std_stats = benchmark.run[delete_std_dict](max_runtime_secs=0.5)
+    var delete_compact_stats = benchmark.run[delete_compact_dict](max_runtime_secs=0.5)
+    var delete_std_stats = benchmark.run[delete_std_dict](max_runtime_secs=0.5)
 
     print("Compact delete speedup:", delete_std_stats.mean() / delete_compact_stats.mean())
 
     print("+++++++Read After Delete Dict Benchmark+++++++")
 
-    let read_after_delete_compact_stats = benchmark.run[read_compact_dict](max_runtime_secs=0.5)
-    let read_after_delete_std_stats = benchmark.run[read_std_dict](max_runtime_secs=0.5)
+    var read_after_delete_compact_stats = benchmark.run[read_compact_dict](max_runtime_secs=0.5)
+    var read_after_delete_std_stats = benchmark.run[read_std_dict](max_runtime_secs=0.5)
 
     print("Compact read after delete speedup:", read_after_delete_std_stats.mean() / read_after_delete_compact_stats.mean())
 

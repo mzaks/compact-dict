@@ -40,17 +40,17 @@ struct SparseArray[T: DType]:
 
     @always_inline
     fn __contains__(self, index: Int) -> Bool:
-        let offset = index >> 3
-        let bit_index = index & 7
-        return self.__contains__(offset, bit_index)
+        var offset = index >> 3
+        var bit_index = index & 7
+        return self.contains(offset, bit_index)
 
     @always_inline
-    fn __contains__(self, offset: Int, bit_index: Int) -> Bool:
+    fn contains(self, offset: Int, bit_index: Int) -> Bool:
         return offset < self.mask_size and self.mask.load(offset) & (1 << bit_index) != 0
 
     fn __setitem__(inout self, index: Int, value: SIMD[T, 1]):
-        let offset = index >> 3
-        let bit_index = index & 7
+        var offset = index >> 3
+        var bit_index = index & 7
         
         if self.mask_size <= offset:
             var mask = DTypePointer[DType.uint8].alloc(offset + 1)
@@ -60,10 +60,10 @@ struct SparseArray[T: DType]:
             self.mask = mask
             self.mask_size = offset + 1
         
-        let p = self.mask.offset(offset)
-        let mask = p.load()
+        var p = self.mask.offset(offset)
+        var mask = p.load()
 
-        if self.__contains__(offset, bit_index):
+        if self.contains(offset, bit_index):
             self.values.store(self._value_index(offset, bit_index), value)
             return
 
@@ -77,35 +77,35 @@ struct SparseArray[T: DType]:
             self.values = values
             self.values_capacity = values_capacity
 
-        let value_index = self._value_index(offset, bit_index)
+        var value_index = self._value_index(offset, bit_index)
         for i in range(self.values_count, value_index, -1):
             self.values.store(i, self.values.load(i-1))
         self.values.store(value_index, value)
         self.values_count += 1
 
     fn get(self, index: Int) -> Optional[SIMD[T, 1]]:
-        let offset = index >> 3
-        let bit_index = index & 7
-        if not self.__contains__(offset, bit_index):
+        var offset = index >> 3
+        var bit_index = index & 7
+        if not self.contains(offset, bit_index):
             return None
         return self.values.load(self._value_index(offset, bit_index))
 
     @always_inline
     fn _value_index(self, offset: Int, bit_index: Int) -> Int:
         
-        if not self.__contains__(offset, bit_index):
+        if not self.contains(offset, bit_index):
             return -1
         
         alias width = 32
         var cursor = 0
         var result = 0
         while cursor + width < offset:
-            let v = self.mask.simd_load[width](cursor)
+            var v = self.mask.simd_load[width](cursor)
             result += ctpop(v).cast[DType.int16]().reduce_add[1]().to_int()
             cursor += width
         
         while cursor <= offset:
-            let v = self.mask.load(cursor)
+            var v = self.mask.load(cursor)
             result += ctpop(v).to_int()
             cursor += 1
 
@@ -113,8 +113,8 @@ struct SparseArray[T: DType]:
         return result - 1
 
     fn values_tensor(self) -> Tensor[T]:
-        let spec = TensorSpec(DType.float32, self.values_count)
-        let data = DTypePointer[T].alloc(self.values_count)
+        var spec = TensorSpec(DType.float32, self.values_count)
+        var data = DTypePointer[T].alloc(self.values_count)
         memcpy(data, self.values, self.values_count)
         return Tensor(data, spec)
 

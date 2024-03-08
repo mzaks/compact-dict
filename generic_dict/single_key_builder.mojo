@@ -27,9 +27,9 @@ struct SingleKeyBuilder(KeysBuilder):
 
     @always_inline  
     fn add[T: DType, size: Int](inout self, value: SIMD[T, size]):
-        let prev_end = 0
-        let key_length = size * T.sizeof()
-        let old_key_size = self.key_size
+        var prev_end = 0
+        var key_length = size * T.sizeof()
+        var old_key_size = self.key_size
         self.key_size += key_length
         
         var needs_realocation = False
@@ -47,8 +47,8 @@ struct SingleKeyBuilder(KeysBuilder):
     
     @always_inline
     fn add_buffer[T: DType](inout self, pointer: DTypePointer[T], size: Int):
-        let key_length = size * T.sizeof()
-        let old_key_size = self.key_size
+        var key_length = size * T.sizeof()
+        var old_key_size = self.key_size
         self.key_size += key_length
         
         var needs_realocation = False

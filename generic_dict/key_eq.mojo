@@ -2,15 +2,15 @@ from .keys_container import KeyRef
 
 @always_inline
 fn eq(a: KeyRef, b: KeyRef) -> Bool:
-    let l = a.size
+    var l = a.size
     if l != b.size:
         return False
-    let p1 = a.pointer
-    let p2 = b.pointer
+    var p1 = a.pointer
+    var p2 = b.pointer
     var offset = 0
     alias step = 16
     while l - offset >= step:
-        let unequal = p1.simd_load[step](offset) != p2.simd_load[step](offset)
+        var unequal = p1.simd_load[step](offset) != p2.simd_load[step](offset)
         if unequal.reduce_or():
             return False
         offset += step

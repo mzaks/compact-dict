@@ -7,23 +7,6 @@ from testing import assert_equal
 from corpora import *
 
 
-@value
-struct StringKey(KeyElement):
-    var s: String
-
-    fn __init__(inout self, owned s: String):
-        self.s = s^
-
-    fn __init__(inout self, s: StringLiteral):
-        self.s = String(s)
-
-    fn __hash__(self) -> Int:
-        var ptr = self.s._as_ptr()
-        return hash(ptr, len(self.s))
-
-    fn __eq__(self, other: Self) -> Bool:
-        return self.s == other.s
-
 fn corpus_stats(corpus: DynamicVector[String]):
     print("=======Corpus Stats=======")
     print("Number of elements:", len(corpus))
@@ -50,7 +33,7 @@ fn corpus_stats(corpus: DynamicVector[String]):
 
 fn main() raises:
     var d1 = Dict[Int]()
-    var d2 = StdDict[StringKey, Int]()
+    var d2 = StdDict[String, Int]()
     var corpus = french_text_to_keys()
     
     print("")
@@ -66,7 +49,7 @@ fn main() raises:
 
     @parameter
     fn build_std_dict():
-        var d = StdDict[StringKey, Int]()
+        var d = StdDict[String, Int]()
         for i in range(len(corpus)):
             d[corpus[i]] = i
         d2 = d^

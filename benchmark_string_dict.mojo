@@ -1,5 +1,5 @@
 import benchmark
-from string_dict import Dict
+from string_dict import Dict as CompactDict
 from collections.dict import KeyElement, Dict as StdDict
 from pathlib import cwd
 from testing import assert_equal
@@ -32,7 +32,7 @@ fn corpus_stats(corpus: DynamicVector[String]):
     print("\n")
 
 fn main() raises:
-    var d1 = Dict[Int]()
+    var d1 = CompactDict[Int]()
     var d2 = StdDict[String, Int]()
     var corpus = french_text_to_keys()
     
@@ -41,8 +41,8 @@ fn main() raises:
 
     @parameter
     fn build_compact_dict():
-        var d = Dict[Int](len(corpus))
-        # var d = Dict[Int]()
+        var d = CompactDict[Int](len(corpus))
+        # var d = CompactDict[Int]()
         for i in range(len(corpus)):
             d.put(corpus[i], i)
         d1 = d^

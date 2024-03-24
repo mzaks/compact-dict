@@ -179,10 +179,12 @@ fn main() raises:
     report("German", german_text_to_keys(), csv_builder)
     report("Greek", greek_text_to_keys(), csv_builder)
     report("Hebrew", hebrew_text_to_keys(), csv_builder)
-    report("Hindi", hindi_text_to_keys(), csv_builder)
+    # Bug on intel i7 Mojo 24.1.1
+    # report("Hindi", hindi_text_to_keys(), csv_builder)
     report("Japanese", japanese_long_keys(), csv_builder)
     report("l33t", l33t_text_to_keys(), csv_builder)
-    report("Russian", russian_text_to_keys(), csv_builder)
+    # Bug on intel i7 Mojo 24.1.1
+    # report("Russian", russian_text_to_keys(), csv_builder)
     report("S3", s3_action_names(), csv_builder)
     report("Words", system_words_collection(), csv_builder)
     print(csv_builder^.finish())

@@ -2,7 +2,6 @@
 
 from math.bit import bswap
 from math.math import rotate_bits_left
-from memory.buffer import Buffer
 from .keys_container import KeyRef
 
 alias U256 = SIMD[DType.uint64, 4]
@@ -74,11 +73,11 @@ struct AHasher:
         self.buffer = (self.buffer + length) * MULTIPLE
         if length > 8:
             if length > 16:
-                var tail = data.offset(length - 16).bitcast[DType.uint64]().simd_load[2]()
+                var tail = data.offset(length - 16).bitcast[DType.uint64]().load[width=2]()
                 self.large_update(tail)
                 var offset = 0
                 while length - offset > 16:
-                    var block = data.offset(offset).bitcast[DType.uint64]().simd_load[2]()
+                    var block = data.offset(offset).bitcast[DType.uint64]().load[width=2]()
                     self.large_update(block)
                     offset += 16
             else:

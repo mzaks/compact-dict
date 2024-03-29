@@ -7,7 +7,7 @@ from testing import assert_equal
 from corpora import *
 
 
-fn corpus_stats(corpus: DynamicVector[String]):
+fn corpus_stats(corpus: List[String]):
     print("=======Corpus Stats=======")
     print("Number of elements:", len(corpus))
     var min = 100000000

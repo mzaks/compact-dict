@@ -95,11 +95,8 @@ struct KeysContainer[KeyEndType: DType = DType.uint32](Sized):
         return keys
 
     fn print_keys(self):
-        print_no_newline("(")
-        print_no_newline(self.count)
-        print_no_newline(")[")
+        print("(" + str(self.count) + ")[", end="")
         for i in range(self.count):
-            print_no_newline(self[i])
-            if i < self.count - 1:
-                print_no_newline(", ")
+            var end = ", " if i < self.capacity - 1 else ""
+            print(self[i], end=end)
         print("]")

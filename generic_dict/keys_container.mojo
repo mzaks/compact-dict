@@ -1,5 +1,4 @@
 from collections.vector import InlinedFixedVector
-from math import bitcast
 
 trait Keyable:
     fn accept[T: KeysBuilder](self, inout keys_builder: T): ...
@@ -86,7 +85,7 @@ struct KeysContainer[KeyEndType: DType = DType.uint32](Sized, KeysBuilder):
             self.keys.free()
             self.keys = keys
         
-        self.keys.simd_store(prev_end.to_int() + old_key_size, bitcast[DType.uint8, size * T.sizeof()](value))
+        self.keys.store(prev_end.to_int() + old_key_size, bitcast[DType.uint8, size * T.sizeof()](value))
 
     @always_inline
     fn add_buffer[T: DType](inout self, pointer: DTypePointer[T], size: Int):
@@ -150,11 +149,7 @@ struct KeysContainer[KeyEndType: DType = DType.uint32](Sized, KeysBuilder):
         return self.count
 
     fn print_keys(self) raises:
-        print_no_newline("(")
-        print_no_newline(self.count)
-        print_no_newline(")[")
+        print("(" + str(self.count) + ")[")
         for i in range(self.count):
-            print_no_newline(self[i])
-            if i < self.count - 1:
-                print_no_newline(", ")
-        print("]")
+            var end = ", " if i < self.capacity - 1 else "]\n"
+            print(self[i], end=end)

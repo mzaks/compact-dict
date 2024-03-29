@@ -1,4 +1,3 @@
-from math import bitcast
 from .keys_container import KeysBuilder, KeyRef
 
 struct SingleKeyBuilder(KeysBuilder):
@@ -43,7 +42,7 @@ struct SingleKeyBuilder(KeysBuilder):
             self.key.free()
             self.key = key
         
-        self.key.simd_store(old_key_size, bitcast[DType.uint8, size * T.sizeof()](value))
+        self.key.store(old_key_size, bitcast[DType.uint8, size * T.sizeof()](value))
     
     @always_inline
     fn add_buffer[T: DType](inout self, pointer: DTypePointer[T], size: Int):

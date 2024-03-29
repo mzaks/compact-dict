@@ -1,5 +1,6 @@
 from math.bit import bit_length, ctpop
 from memory import memset_zero, memcpy
+from collections import List
 from .string_eq import eq
 from .keys_container import KeysContainer
 from .ahasher import ahash
@@ -14,7 +15,7 @@ struct Dict[
 ](Sized):
     var keys: KeysContainer[KeyOffsetType]
     var key_hashes: DTypePointer[KeyCountType]
-    var values: DynamicVector[V]
+    var values: List[V]
     var key_map: DTypePointer[KeyCountType]
     var deleted_mask: DTypePointer[DType.uint8]
     var count: Int
@@ -41,7 +42,7 @@ struct Dict[
             self.key_hashes = DTypePointer[KeyCountType].alloc(self.capacity)
         else:
             self.key_hashes = DTypePointer[KeyCountType].alloc(0)
-        self.values = DynamicVector[V](capacity=capacity)
+        self.values = List[V](capacity=capacity)
         self.key_map = DTypePointer[KeyCountType].alloc(self.capacity)
         memset_zero(self.key_map, self.capacity)
         @parameter
@@ -106,7 +107,7 @@ struct Dict[
                 @parameter
                 if caching_hashes:
                     self.key_hashes.store(key_map_index, key_hash)
-                self.values.push_back(value)
+                self.values.append(value)
                 self.count += 1
                 self.key_map.store(key_map_index, SIMD[KeyCountType, 1](self.keys.count))
                 return
@@ -262,22 +263,16 @@ struct Dict[
         print("Dict count:", self.count, "and capacity:", self.capacity)
         print("KeyMap:")
         for i in range(self.capacity):
-            print_no_newline(self.key_map.load(i))
-            if i < self.capacity - 1:
-                print_no_newline(", ")
-            else:
-                print("")
+            var end = ", " if i < self.capacity - 1 else "\n"
+            print(self.key_map.load(i), end=end)
         print("Keys:")
         self.keys.print_keys()
         @parameter
         if caching_hashes:
             print("KeyHashes:")
             for i in range(self.capacity):
+                var end = ", " if i < self.capacity - 1 else "\n"
                 if self.key_map.load(i) > 0:
-                    print_no_newline(self.key_hashes.load(i))
+                    print(self.key_hashes.load(i), end=end)
                 else:
-                    print_no_newline(0)
-                if i < self.capacity - 1:
-                        print_no_newline(", ")
-                else:
-                    print("")
+                    print(0, end=end)

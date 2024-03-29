@@ -10,7 +10,7 @@ fn eq(a: KeyRef, b: KeyRef) -> Bool:
     var offset = 0
     alias step = 16
     while l - offset >= step:
-        var unequal = p1.simd_load[step](offset) != p2.simd_load[step](offset)
+        var unequal = p1.load[width=step](offset) != p2.load[width=step](offset)
         if unequal.reduce_or():
             return False
         offset += step

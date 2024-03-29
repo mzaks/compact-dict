@@ -44,7 +44,7 @@ fn test_s3_corpus() raises:
         KeyOffsetType=DType.uint16, 
         NextKeyCountType=DType.uint8
     ]()
-    let corpus = s3_action_names()
+    var corpus = s3_action_names()
     for i in range(len(corpus)):
         d.put(StringKey(corpus[i]), i)
     
@@ -52,8 +52,8 @@ fn test_s3_corpus() raises:
 
     var all_values = 0
     for i in range(len(corpus)):
-        let v = d.get(StringKey(corpus[i]))
-        let c = len(v)
+        var v = d.get(StringKey(corpus[i]))
+        var c = len(v)
         all_values += c
 
     assert_equal(all_values, 143 + (len(corpus) - 143) * 3)
@@ -61,7 +61,7 @@ fn test_s3_corpus() raises:
 
 fn test_system_corpus() raises:
     var d = MultiDict[Int]()
-    let corpus = system_words_collection()
+    var corpus = system_words_collection()
     for i in range(len(corpus)):
         d.put(StringKey(corpus[i]), i)
     
@@ -69,8 +69,8 @@ fn test_system_corpus() raises:
 
     var all_values = 0
     for i in range(len(corpus)):
-        let v = d.get(StringKey(corpus[i]))
-        let c = len(v)
+        var v = d.get(StringKey(corpus[i]))
+        var c = len(v)
         all_values += c
 
     assert_equal(all_values, len(corpus))
@@ -83,15 +83,15 @@ fn test_english_corpus() raises:
         KeyOffsetType=DType.uint16, 
         NextKeyCountType=DType.uint16
     ]()
-    let corpus = english_text_to_keys()
+    var corpus = english_text_to_keys()
     for i in range(len(corpus)):
         d.put(StringKey(corpus[i]), i)
     assert_equal(len(d), 192)
 
     var all_values = 0
     for i in range(len(corpus)):
-        let v = d.get(StringKey(corpus[i]))
-        let c = len(v)
+        var v = d.get(StringKey(corpus[i]))
+        var c = len(v)
         all_values += c
 
     assert_equal(all_values, 18631)

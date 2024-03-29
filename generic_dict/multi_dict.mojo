@@ -15,9 +15,9 @@ struct MultiDict[
 ](Sized):
     var keys: KeysContainer[KeyOffsetType]
     var key_hashes: DTypePointer[KeyCountType]
-    var values: DynamicVector[V]
+    var values: List[V]
     var next_values_index: SparseArray[NextKeyCountType]
-    var next_values: DynamicVector[V]
+    var next_values: List[V]
     var next_next_values_index: SparseArray[NextKeyCountType]
     var key_map: DTypePointer[KeyCountType]
     var count: Int
@@ -53,10 +53,11 @@ struct MultiDict[
             self.key_hashes = DTypePointer[KeyCountType].alloc(self.capacity)
         else:
             self.key_hashes = DTypePointer[KeyCountType].alloc(0)
-        self.values = DynamicVector[V](capacity)
+        self.values = List[V](capacity)
         self.key_map = DTypePointer[KeyCountType].alloc(self.capacity)
         memset_zero(self.key_map, self.capacity)
-        self.next_values = DynamicVector[V](0)
+        #TODO: Think about having an optional here or an empty List
+        self.next_values = List[V]()
         self.next_values_index = SparseArray[NextKeyCountType]()
         self.next_next_values_index = SparseArray[NextKeyCountType]()
 
@@ -113,7 +114,7 @@ struct MultiDict[
                 @parameter
                 if caching_hashes:
                     self.key_hashes.store(key_map_index, key_hash)
-                self.values.push_back(value)
+                self.values.append(value)
                 self.count += 1
                 self.key_map.store(key_map_index, SIMD[KeyCountType, 1](self.keys.count))
                 return
@@ -135,7 +136,7 @@ struct MultiDict[
 
     @always_inline
     fn _add_next(inout self, value: V, key_index: Int):
-        self.next_values.push_back(value)
+        self.next_values.append(value)
         var next_index = self.next_values_index.get(key_index - 1)
         if not next_index:
             self.next_values_index[key_index - 1] = len(self.next_values) - 1
@@ -195,24 +196,24 @@ struct MultiDict[
         old_key_map.free()
 
     @always_inline
-    fn get[T: Keyable](inout self, key: T) raises -> DynamicVector[V]:
-        var result = DynamicVector[V]()
+    fn get[T: Keyable](inout self, key: T) raises -> List[V]:
+        var result = List[V]()
         self.key_builder.reset()
         key.accept(self.key_builder)
         var key_ref = self.key_builder.get_key()
         var key_index = self._find_key_index(key_ref)
         if key_index == 0:
             return result
-        result.push_back(self.values[key_index - 1])
+        result.append(self.values[key_index - 1])
         var next_index = self.next_values_index.get(key_index - 1)
         if not next_index:
             return result
         var index = next_index.value().to_int()
-        result.push_back(self.next_values[index])
+        result.append(self.next_values[index])
         var next_next_index = self.next_next_values_index.get(index)
         while next_next_index:
             index = next_next_index.value().to_int()
-            result.push_back(self.next_values[index])
+            result.append(self.next_values[index])
             next_next_index = self.next_next_values_index.get(index)
         return result
 
@@ -241,25 +242,19 @@ struct MultiDict[
         print("Dict count:", self.count, "and capacity:", self.capacity)
         print("KeyMap:")
         for i in range(self.capacity):
-            print_no_newline(self.key_map.load(i))
-            if i < self.capacity - 1:
-                print_no_newline(", ")
-            else:
-                print("")
+            var end = ", " if i < self.capacity - 1 else ""
+            print(self.key_map.load(i), end=end)
         print("Keys:")
         self.keys.print_keys()
         @parameter
         if caching_hashes:
             print("KeyHashes:")
             for i in range(self.capacity):
+                var end = ", " if i < self.capacity - 1 else ""
                 if self.key_map.load(i) > 0:
-                    print_no_newline(self.key_hashes.load(i))
+                    print(self.key_hashes.load(i), end=end)
                 else:
-                    print_no_newline(0)
-                if i < self.capacity - 1:
-                        print_no_newline(", ")
-                else:
-                    print("")
+                    print(0, end=end)
         print("Next Values:")
         self.next_values_index.debug()
         print("Next Next Values:")

@@ -100,7 +100,7 @@ struct SparseArray[T: DType]:
         var cursor = 0
         var result = 0
         while cursor + width < offset:
-            var v = self.mask.simd_load[width](cursor)
+            var v = self.mask.load[width=width](cursor)
             result += ctpop(v).cast[DType.int16]().reduce_add[1]().to_int()
             cursor += width
         
@@ -119,18 +119,14 @@ struct SparseArray[T: DType]:
         return Tensor(data, spec)
 
     fn debug(self):
-        print_no_newline("(")
-        print_no_newline(self.mask_size)
-        print_no_newline(")")
-        print_no_newline("[")
+        print("(" + str(self.mask_size) + ")[")
         for i in range(self.mask_size):
-            print_no_newline(self.mask.load(i), "")
+            var end = ", " if i < self.mask_size - 1 else ""
+            print(self.mask.load(i), end=end)
         print("]")
 
-        print_no_newline("(")
-        print_no_newline(self.values_count)
-        print_no_newline(")")
-        print_no_newline("[")
+        print("(" + str(self.values_count) + ")[")
         for i in range(self.values_count):
-            print_no_newline(self.values.load(i), "")
+            var end = ", " if i < self.mask_size - 1 else ""
+            print(self.values.load(i), end=end)
         print("]")

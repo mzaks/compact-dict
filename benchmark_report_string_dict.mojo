@@ -11,14 +11,14 @@ alias M = 9
 
 @value
 struct BenchmarkData:
-    var reports: DynamicVector[benchmark.Report]
-    var read_checksums: DynamicVector[Int]
+    var reports: List[benchmark.Report]
+    var read_checksums: List[Int]
 
     fn __init__(inout self):
-        self.reports = DynamicVector[benchmark.Report]()
-        self.read_checksums = DynamicVector[Int]()
+        self.reports = List[benchmark.Report]()
+        self.read_checksums = List[Int]()
 
-fn report_std_benchmarks(corpus: DynamicVector[String], inout csv_builder: CsvBuilder) -> BenchmarkData:
+fn report_std_benchmarks(corpus: List[String], inout csv_builder: CsvBuilder) -> BenchmarkData:
     var benchmark_data = BenchmarkData()
     var std_dict = StdDict[String, Int]()
     @parameter
@@ -29,7 +29,7 @@ fn report_std_benchmarks(corpus: DynamicVector[String], inout csv_builder: CsvBu
         std_dict = d^
     var build_stats = benchmark.run[build_dict](max_runtime_secs=0.5)
     csv_builder.push(build_stats.mean("ns"), False)
-    benchmark_data.reports.push_back(build_stats)
+    benchmark_data.reports.append(build_stats)
 
     var sum = 0
     @parameter
@@ -43,8 +43,8 @@ fn report_std_benchmarks(corpus: DynamicVector[String], inout csv_builder: CsvBu
 
     var read_stats = benchmark.run[read_dict](max_runtime_secs=0.5)
     csv_builder.push(read_stats.mean("ns"), False)
-    benchmark_data.reports.push_back(read_stats)
-    benchmark_data.read_checksums.push_back(sum)
+    benchmark_data.reports.append(read_stats)
+    benchmark_data.read_checksums.append(sum)
 
     @parameter
     fn delete_dict():
@@ -57,17 +57,17 @@ fn report_std_benchmarks(corpus: DynamicVector[String], inout csv_builder: CsvBu
     
     var delete_stats = benchmark.run[delete_dict](max_runtime_secs=0.5)
     csv_builder.push(delete_stats.mean("ns"), False)
-    benchmark_data.reports.push_back(delete_stats)
+    benchmark_data.reports.append(delete_stats)
 
     var read_after_delete_stats = benchmark.run[read_dict](max_runtime_secs=0.5)
     csv_builder.push(read_after_delete_stats.mean("ns"), False)
-    benchmark_data.reports.push_back(read_after_delete_stats)
-    benchmark_data.read_checksums.push_back(sum)
+    benchmark_data.reports.append(read_after_delete_stats)
+    benchmark_data.read_checksums.append(sum)
 
     return benchmark_data
 
 
-fn report_compact_benchmarks(corpus: DynamicVector[String], inout csv_builder: CsvBuilder) -> BenchmarkData:
+fn report_compact_benchmarks(corpus: List[String], inout csv_builder: CsvBuilder) -> BenchmarkData:
     var benchmark_data = BenchmarkData()
     var dict = CompactDict[Int]()
     @parameter
@@ -78,7 +78,7 @@ fn report_compact_benchmarks(corpus: DynamicVector[String], inout csv_builder: C
         dict = d^
     var build_stats_nc = benchmark.run[build_dict_nc](max_runtime_secs=0.5)
     csv_builder.push(build_stats_nc.mean("ns"), False)
-    benchmark_data.reports.push_back(build_stats_nc)
+    benchmark_data.reports.append(build_stats_nc)
 
     @parameter
     fn build_dict():
@@ -88,7 +88,7 @@ fn report_compact_benchmarks(corpus: DynamicVector[String], inout csv_builder: C
         dict = d^
     var build_stats = benchmark.run[build_dict](max_runtime_secs=0.5)
     csv_builder.push(build_stats.mean("ns"), False)
-    benchmark_data.reports.push_back(build_stats)
+    benchmark_data.reports.append(build_stats)
 
     var sum = 0
     @parameter
@@ -100,8 +100,8 @@ fn report_compact_benchmarks(corpus: DynamicVector[String], inout csv_builder: C
     var read_stats = benchmark.run[read_dict](max_runtime_secs=0.5)
     var read_checksum = sum
     csv_builder.push(read_stats.mean("ns"), False)
-    benchmark_data.reports.push_back(read_stats)
-    benchmark_data.read_checksums.push_back(sum)
+    benchmark_data.reports.append(read_stats)
+    benchmark_data.read_checksums.append(sum)
 
     @parameter
     fn delete_dict():
@@ -111,18 +111,18 @@ fn report_compact_benchmarks(corpus: DynamicVector[String], inout csv_builder: C
     
     var delete_stats = benchmark.run[delete_dict](max_runtime_secs=0.5)
     csv_builder.push(delete_stats.mean("ns"), False)
-    benchmark_data.reports.push_back(delete_stats)
+    benchmark_data.reports.append(delete_stats)
 
     var read_after_delete_stats = benchmark.run[read_dict](max_runtime_secs=0.5)
     var read_after_delete_checksum = sum
 
     csv_builder.push(read_after_delete_stats.mean("ns"), False)
-    benchmark_data.reports.push_back(read_after_delete_stats)
-    benchmark_data.read_checksums.push_back(sum)
+    benchmark_data.reports.append(read_after_delete_stats)
+    benchmark_data.read_checksums.append(sum)
     
     return benchmark_data
 
-fn corpus_stats(corpus: DynamicVector[String], inout csv_builder: CsvBuilder):
+fn corpus_stats(corpus: List[String], inout csv_builder: CsvBuilder):
     csv_builder.push(len(corpus), False)
     var min = 100000000
     var max = 0
@@ -155,7 +155,7 @@ fn report_checksums_alignment(std: BenchmarkData, compact: BenchmarkData, inout 
     csv_builder.push(std.read_checksums[0] == compact.read_checksums[0], False)
     csv_builder.push(std.read_checksums[1] == compact.read_checksums[1], False)
 
-fn report(name: StringLiteral, corpus: DynamicVector[String], inout csv_builder: CsvBuilder):
+fn report(name: StringLiteral, corpus: List[String], inout csv_builder: CsvBuilder):
     csv_builder.push(name, False)
     corpus_stats(corpus, csv_builder)
     var std_stats = report_std_benchmarks(corpus, csv_builder)

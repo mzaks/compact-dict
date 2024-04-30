@@ -118,6 +118,7 @@ struct Dict[
                     var other_key = self.keys[key_index - 1]
                     if eq(other_key, key):
                         self.values[key_index - 1] = value # replace value
+                        @parameter
                         if destructive:
                             if self._is_deleted(key_index - 1):
                                 self.count += 1
@@ -127,6 +128,7 @@ struct Dict[
                 var other_key = self.keys[key_index - 1]
                 if eq(other_key, key):
                     self.values[key_index - 1] = value # replace value
+                    @parameter
                     if destructive:
                         if self._is_deleted(key_index - 1):
                             self.count += 1

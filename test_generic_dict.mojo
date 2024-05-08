@@ -21,12 +21,12 @@ fn test_person_dict() raises:
     var p6 = Person("Max", 31)
 
     var d = Dict[Int]()
-    d.put(p1, 1)
-    d.put(p2, 11)
-    d.put(p3, 111)
-    d.put(p4, 1111)
-    d.put(p5, 11111)
-    d.put(p6, 111111)
+    _= d.put(p1, 1)
+    _= d.put(p2, 11)
+    _= d.put(p3, 111)
+    _= d.put(p4, 1111)
+    _= d.put(p5, 11111)
+    _= d.put(p6, 111111)
 
     assert_equal(d.get(p1, 0), 1)
     # assert_equal(d.get(p2, 0), 11)
@@ -35,5 +35,29 @@ fn test_person_dict() raises:
     # assert_equal(d.get(p5, 0), 11111)
     # assert_equal(d.get(p6, 0), 111111)
 
-fn main()raises:
+@value
+struct StringKey(Keyable):
+    var s: String
+
+    fn __init__(inout self, owned s: String):
+        self.s = s^
+
+    fn __init__(inout self, s: StringLiteral):
+        self.s = String(s)
+
+    fn accept[T: KeysBuilder](self, inout keys_builder: T):
+        keys_builder.add_buffer(self.s._as_ptr(), len(self.s))
+
+fn test_add_vs_update() raises:
+    var d = Dict[Int]()
+    assert_equal(d.put(StringKey("a"), 1), True)
+    assert_equal(d.put(StringKey("a"), 2), False)
+    d.delete(StringKey("a"))
+    assert_equal(d.put(StringKey("a"), 3), True)
+    assert_equal(d.put(StringKey("a"), 4), False)
+    assert_equal(d.get(StringKey("a"), 0), 4)
+
+
+fn main() raises:
     test_person_dict()
+    test_add_vs_update()

@@ -103,7 +103,8 @@ struct Dict[
         except:
             return False
 
-    fn put[T: Keyable](inout self, key: T, value: V) raises:
+    fn put[T: Keyable](inout self, key: T, value: V) raises -> Bool:
+        """Return True when value is inserted and not updated."""
         if self.count / self.capacity >= 0.87:
             self._rehash()
         key.accept(self.keys)
@@ -122,7 +123,7 @@ struct Dict[
                 self.values.append(value)
                 self.count += 1
                 self.key_map.store(key_map_index, SIMD[KeyCountType, 1](self.keys.count))
-                return
+                return True
             @parameter
             if caching_hashes:
                 var other_key_hash = self.key_hashes[key_map_index]
@@ -136,7 +137,8 @@ struct Dict[
                             if self._is_deleted(key_index - 1):
                                 self.count += 1
                                 self._not_deleted(key_index - 1)
-                        return
+                                return True
+                        return False
             else:
                 var other_key = self.keys[key_index - 1]
                 if eq(other_key, key_ref):
@@ -147,7 +149,8 @@ struct Dict[
                         if self._is_deleted(key_index - 1):
                             self.count += 1
                             self._not_deleted(key_index - 1)
-                    return
+                            return True
+                    return False
             
             key_map_index = (key_map_index + 1) & modulo_mask
 

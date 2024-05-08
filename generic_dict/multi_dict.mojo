@@ -45,7 +45,7 @@ struct MultiDict[
         else:
             var icapacity = Int64(capacity)
             self.capacity = capacity if ctpop(icapacity) == 1 else
-                            1 << (bit_length(icapacity)).to_int()
+                            1 << int(bit_length(icapacity))
         self.keys = KeysContainer[KeyOffsetType](capacity)
         self.key_builder = SingleKeyBuilder()
         @parameter
@@ -53,7 +53,7 @@ struct MultiDict[
             self.key_hashes = DTypePointer[KeyCountType].alloc(self.capacity)
         else:
             self.key_hashes = DTypePointer[KeyCountType].alloc(0)
-        self.values = List[V](capacity)
+        self.values = List[V](capacity=capacity)
         self.key_map = DTypePointer[KeyCountType].alloc(self.capacity)
         memset_zero(self.key_map, self.capacity)
         #TODO: Think about having an optional here or an empty List
@@ -107,9 +107,9 @@ struct MultiDict[
 
         var key_hash = hash(key_ref).cast[KeyCountType]()
         var modulo_mask = self.capacity - 1
-        var key_map_index = (key_hash & modulo_mask).to_int()
+        var key_map_index = int(key_hash & modulo_mask)
         while True:
-            var key_index = self.key_map.load(key_map_index).to_int()
+            var key_index = int(self.key_map.load(key_map_index))
             if key_index == 0:
                 @parameter
                 if caching_hashes:
@@ -141,10 +141,10 @@ struct MultiDict[
         if not next_index:
             self.next_values_index[key_index - 1] = len(self.next_values) - 1
         else:
-            var index = next_index.value().to_int()
+            var index = int(next_index.value()[])
             var next_next_index = self.next_next_values_index.get(index)
             while next_next_index:
-                index = next_next_index.value().to_int()
+                index = int(next_next_index.value()[])
                 next_next_index = self.next_next_values_index.get(index)
             self.next_next_values_index[index] = len(self.next_values) - 1
         self.keys.drop_last()
@@ -154,7 +154,6 @@ struct MultiDict[
         var old_key_map = self.key_map
         var old_capacity = self.capacity
         self.capacity <<= 1
-        var mask_capacity = self.capacity >> 3
         self.key_map = DTypePointer[KeyCountType].alloc(self.capacity)
         memset_zero(self.key_map, self.capacity)
         
@@ -172,13 +171,13 @@ struct MultiDict[
             if caching_hashes:
                 key_hash = self.key_hashes[i]
             else:
-                key_hash = hash(self.keys[(old_key_map[i] - 1).to_int()]).cast[KeyCountType]()
+                key_hash = hash(self.keys[int(old_key_map[i] - 1)]).cast[KeyCountType]()
 
-            var key_map_index = (key_hash & modulo_mask).to_int()
+            var key_map_index = int(key_hash & modulo_mask)
 
             var searching = True
             while searching:
-                var key_index = self.key_map.load(key_map_index).to_int()
+                var key_index = int(self.key_map.load(key_map_index))
 
                 if key_index == 0:
                     self.key_map.store(key_map_index, old_key_map[i])
@@ -208,11 +207,11 @@ struct MultiDict[
         var next_index = self.next_values_index.get(key_index - 1)
         if not next_index:
             return result
-        var index = next_index.value().to_int()
+        var index = int(next_index.value()[])
         result.append(self.next_values[index])
         var next_next_index = self.next_next_values_index.get(index)
         while next_next_index:
-            index = next_next_index.value().to_int()
+            index = int(next_next_index.value()[])
             result.append(self.next_values[index])
             next_next_index = self.next_next_values_index.get(index)
         return result
@@ -220,9 +219,9 @@ struct MultiDict[
     fn _find_key_index(self, key_ref: KeyRef) raises -> Int:
         var key_hash = hash(key_ref).cast[KeyCountType]()
         var modulo_mask = self.capacity - 1
-        var key_map_index = (key_hash & modulo_mask).to_int()
+        var key_map_index = int(key_hash & modulo_mask)
         while True:
-            var key_index = self.key_map.load(key_map_index).to_int()
+            var key_index = int(self.key_map.load(key_map_index))
             if key_index == 0:
                 return key_index
             @parameter

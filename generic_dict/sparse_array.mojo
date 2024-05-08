@@ -101,22 +101,22 @@ struct SparseArray[T: DType]:
         var result = 0
         while cursor + width < offset:
             var v = self.mask.load[width=width](cursor)
-            result += ctpop(v).cast[DType.int16]().reduce_add[1]().to_int()
+            result += int(ctpop(v).cast[DType.int16]().reduce_add[1]())
             cursor += width
         
         while cursor <= offset:
             var v = self.mask.load(cursor)
-            result += ctpop(v).to_int()
+            result += int(ctpop(v))
             cursor += 1
 
-        result -= ctpop(self.mask.load(offset) >> (bit_index + 1)).to_int()
+        result -= int(ctpop(self.mask.load(offset) >> (bit_index + 1)))
         return result - 1
 
     fn values_tensor(self) -> Tensor[T]:
         var spec = TensorSpec(DType.float32, self.values_count)
         var data = DTypePointer[T].alloc(self.values_count)
         memcpy(data, self.values, self.values_count)
-        return Tensor(data, spec)
+        return Tensor(spec, data)
 
     fn debug(self):
         print("(" + str(self.mask_size) + ")[")

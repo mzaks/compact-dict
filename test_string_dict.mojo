@@ -77,6 +77,18 @@ fn test_simple_manipulations_non_caching() raises:
 
     _ = d
 
+
+# TODO: File a compiler bug
+# fn test_upsert() raises:
+#     var d = Dict[Int32, KeyCountType=DType.uint8, KeyOffsetType=DType.uint16]()
+#     var corpus = s3_action_names()
+    
+#     fn inc(value: Int32) -> Int32:
+#         return value + 1
+
+#     for i in range(len(corpus)):
+#         d.upsert(corpus[i], 1, inc)
+
 fn main()raises:
     test_simple_manipulations()
     test_simple_manipulations_on_non_destructive()

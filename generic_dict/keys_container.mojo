@@ -13,8 +13,8 @@ struct KeyRef(Stringable):
     fn __str__(self) -> String:
         var result = String("(") + String(self.size) + (")")
         for i in range(self.size):
-            result += lookup[(self.pointer.load(i) >> 4).to_int()]
-            result += lookup[(self.pointer.load(i) & 0xf).to_int()]
+            result += lookup[int(self.pointer.load(i) >> 4)]
+            result += lookup[int(self.pointer.load(i) & 0xf)]
         return result
 
 trait KeysBuilder:
@@ -81,11 +81,11 @@ struct KeysContainer[KeyEndType: DType = DType.uint32](Sized, KeysBuilder):
 
         if needs_realocation:
             var keys = DTypePointer[DType.uint8].alloc(self.allocated_bytes)
-            memcpy(keys, self.keys, prev_end.to_int() + old_key_size)
+            memcpy(keys, self.keys, int(prev_end) + old_key_size)
             self.keys.free()
             self.keys = keys
         
-        self.keys.store(prev_end.to_int() + old_key_size, bitcast[DType.uint8, size * T.sizeof()](value))
+        self.keys.store(prev_end + old_key_size, bitcast[DType.uint8, size * T.sizeof()](value))
 
     @always_inline
     fn add_buffer[T: DType](inout self, pointer: DTypePointer[T], size: Int):
@@ -102,7 +102,7 @@ struct KeysContainer[KeyEndType: DType = DType.uint32](Sized, KeysBuilder):
 
         if needs_realocation:
             var keys = DTypePointer[DType.uint8].alloc(self.allocated_bytes)
-            memcpy(keys, self.keys, prev_end.to_int() + old_key_size)
+            memcpy(keys, self.keys, int(prev_end) + old_key_size)
             self.keys.free()
             self.keys = keys
         
@@ -136,8 +136,8 @@ struct KeysContainer[KeyEndType: DType = DType.uint32](Sized, KeysBuilder):
     fn get(self, index: Int) raises -> KeyRef:
         if index < 0 or index >= self.count:
             raise "Invalid index"
-        var start = 0 if index == 0 else self.keys_end[index - 1].to_int()
-        var length = self.keys_end[index].to_int() - start
+        var start = 0 if index == 0 else int(self.keys_end[index - 1])
+        var length = int(self.keys_end[index]) - start
         return KeyRef(self.keys.offset(start), length)
 
     @always_inline

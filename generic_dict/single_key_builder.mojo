@@ -26,7 +26,6 @@ struct SingleKeyBuilder(KeysBuilder):
 
     @always_inline  
     fn add[T: DType, size: Int](inout self, value: SIMD[T, size]):
-        var prev_end = 0
         var key_length = size * T.sizeof()
         var old_key_size = self.key_size
         self.key_size += key_length

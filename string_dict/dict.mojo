@@ -35,7 +35,7 @@ struct Dict[
         else:
             var icapacity = Int64(capacity)
             self.capacity = capacity if ctpop(icapacity) == 1 else
-                            1 << (bit_length(icapacity)).to_int()
+                            1 << int(bit_length(icapacity))
         self.keys = KeysContainer[KeyOffsetType](capacity)
         @parameter
         if caching_hashes:
@@ -99,9 +99,9 @@ struct Dict[
         
         var key_hash = hash(key).cast[KeyCountType]()
         var modulo_mask = self.capacity - 1
-        var key_map_index = (key_hash & modulo_mask).to_int()
+        var key_map_index = int(key_hash & modulo_mask)
         while True:
-            var key_index = self.key_map.load(key_map_index).to_int()
+            var key_index = int(self.key_map.load(key_map_index))
             if key_index == 0:
                 self.keys.add(key)
                 @parameter
@@ -190,13 +190,13 @@ struct Dict[
             if caching_hashes:
                 key_hash = self.key_hashes[i]
             else:
-                key_hash = hash(self.keys[(old_key_map[i] - 1).to_int()]).cast[KeyCountType]()
+                key_hash = hash(self.keys[int(old_key_map[i] - 1)]).cast[KeyCountType]()
 
-            var key_map_index = (key_hash & modulo_mask).to_int()
+            var key_map_index = int(key_hash & modulo_mask)
 
             var searching = True
             while searching:
-                var key_index = self.key_map.load(key_map_index).to_int()
+                var key_index = int(self.key_map.load(key_map_index))
 
                 if key_index == 0:
                     self.key_map.store(key_map_index, old_key_map[i])
@@ -236,14 +236,30 @@ struct Dict[
             self.count -= 1
         self._deleted(key_index - 1)
 
+    fn upsert(inout self, key: String, update: fn(value: Optional[V]) -> V):
+        var key_index = self._find_key_index(key)
+        if key_index == 0:
+            var value = update(None)
+            self.put(key, value)
+        else:
+            key_index -= 1
+
+            @parameter
+            if destructive: 
+                if self._is_deleted(key_index):
+                    self.values[key_index] = update(None)
+                    return
+            
+            self.values[key_index] = update(self.values[key_index])
+
     @always_inline
     fn _find_key_index(self, key: String) -> Int:
         var key_hash = hash(key).cast[KeyCountType]()
         var modulo_mask = self.capacity - 1
 
-        var key_map_index = (key_hash & modulo_mask).to_int()
+        var key_map_index = int(key_hash & modulo_mask)
         while True:
-            var key_index = self.key_map.load(key_map_index).to_int()
+            var key_index = int(self.key_map.load(key_map_index))
             if key_index == 0:
                 return key_index
             

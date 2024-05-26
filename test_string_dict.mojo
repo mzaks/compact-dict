@@ -82,16 +82,26 @@ struct MyInt:
     var value: Int
 
 fn test_upsert() raises:
-    var d = Dict[MyInt, KeyCountType=DType.uint8, KeyOffsetType=DType.uint16]()
+    var d1 = Dict[MyInt, KeyCountType=DType.uint8, KeyOffsetType=DType.uint16]()
     var corpus = s3_action_names()
     
     fn inc(value: Optional[MyInt]) -> MyInt:
         return MyInt(value.or_else(MyInt(0)).value + 1)
 
     for i in range(len(corpus)):
-        d.upsert(corpus[i], inc)
+        d1.upsert(corpus[i], inc)
+
+    # Does not work probably because of Int is a register passable type
+    # var d2 = Dict[Int, KeyCountType=DType.uint8, KeyOffsetType=DType.uint16]()
+
+    # fn inc2(value: Optional[Int]) -> Int:
+    #     return value.or_else(0) + 1
+
+    # for i in range(len(corpus)):
+    #     d2.upsert(corpus[i], inc2) 
 
 fn main()raises:
     test_simple_manipulations()
     test_simple_manipulations_on_non_destructive()
     test_simple_manipulations_non_caching()
+    test_upsert()

@@ -19,7 +19,7 @@ struct MultiDict[
     var next_values_index: SparseArray[NextKeyCountType]
     var next_values: List[V]
     var next_next_values_index: SparseArray[NextKeyCountType]
-    var key_map: DTypePointer[KeyCountType]
+    var slot_to_index: DTypePointer[KeyCountType]
     var count: Int
     var capacity: Int
     var key_builder: SingleKeyBuilder
@@ -54,8 +54,8 @@ struct MultiDict[
         else:
             self.key_hashes = DTypePointer[KeyCountType].alloc(0)
         self.values = List[V](capacity=capacity)
-        self.key_map = DTypePointer[KeyCountType].alloc(self.capacity)
-        memset_zero(self.key_map, self.capacity)
+        self.slot_to_index = DTypePointer[KeyCountType].alloc(self.capacity)
+        memset_zero(self.slot_to_index, self.capacity)
         #TODO: Think about having an optional here or an empty List
         self.next_values = List[V]()
         self.next_values_index = SparseArray[NextKeyCountType]()
@@ -73,8 +73,8 @@ struct MultiDict[
         else:
             self.key_hashes = DTypePointer[KeyCountType].alloc(0)
         self.values = existing.values
-        self.key_map = DTypePointer[KeyCountType].alloc(self.capacity)
-        memcpy(self.key_map, existing.key_map, self.capacity)
+        self.slot_to_index = DTypePointer[KeyCountType].alloc(self.capacity)
+        memcpy(self.slot_to_index, existing.slot_to_index, self.capacity)
         self.next_values = existing.next_values
         self.next_values_index = existing.next_values_index 
         self.next_next_values_index = existing.next_next_values_index 
@@ -86,13 +86,13 @@ struct MultiDict[
         self.key_builder = existing.key_builder^
         self.key_hashes = existing.key_hashes
         self.values = existing.values^
-        self.key_map = existing.key_map
+        self.slot_to_index = existing.slot_to_index
         self.next_values = existing.next_values^
         self.next_values_index = existing.next_values_index^
         self.next_next_values_index = existing.next_next_values_index^
 
     fn __del__(owned self):
-        self.key_map.free()
+        self.slot_to_index.free()
         self.key_hashes.free()
 
     fn __len__(self) -> Int:
@@ -107,20 +107,20 @@ struct MultiDict[
 
         var key_hash = hash(key_ref).cast[KeyCountType]()
         var modulo_mask = self.capacity - 1
-        var key_map_index = int(key_hash & modulo_mask)
+        var slot = int(key_hash & modulo_mask)
         while True:
-            var key_index = int(self.key_map.load(key_map_index))
+            var key_index = int(self.slot_to_index.load(slot))
             if key_index == 0:
                 @parameter
                 if caching_hashes:
-                    self.key_hashes.store(key_map_index, key_hash)
+                    self.key_hashes.store(slot, key_hash)
                 self.values.append(value)
                 self.count += 1
-                self.key_map.store(key_map_index, SIMD[KeyCountType, 1](self.keys.count))
+                self.slot_to_index.store(slot, SIMD[KeyCountType, 1](self.keys.count))
                 return
             @parameter
             if caching_hashes:
-                var other_key_hash = self.key_hashes[key_map_index]
+                var other_key_hash = self.key_hashes[slot]
                 if other_key_hash == key_hash:
                     var other_key = self.keys[key_index - 1]
                     if eq(other_key, key_ref):
@@ -132,7 +132,7 @@ struct MultiDict[
                     self._add_next(value, key_index)
                     return
             
-            key_map_index = (key_map_index + 1) & modulo_mask
+            slot = (slot + 1) & modulo_mask
 
     @always_inline
     fn _add_next(inout self, value: V, key_index: Int):
@@ -151,11 +151,11 @@ struct MultiDict[
 
     @always_inline
     fn _rehash(inout self) raises:
-        var old_key_map = self.key_map
+        var old_slot_to_index = self.slot_to_index
         var old_capacity = self.capacity
         self.capacity <<= 1
-        self.key_map = DTypePointer[KeyCountType].alloc(self.capacity)
-        memset_zero(self.key_map, self.capacity)
+        self.slot_to_index = DTypePointer[KeyCountType].alloc(self.capacity)
+        memset_zero(self.slot_to_index, self.capacity)
         
         var key_hashes = self.key_hashes
         @parameter
@@ -164,34 +164,34 @@ struct MultiDict[
             
         var modulo_mask = self.capacity - 1
         for i in range(old_capacity):
-            if old_key_map[i] == 0:
+            if old_slot_to_index[i] == 0:
                 continue
             var key_hash = SIMD[KeyCountType, 1](0)
             @parameter
             if caching_hashes:
                 key_hash = self.key_hashes[i]
             else:
-                key_hash = hash(self.keys[int(old_key_map[i] - 1)]).cast[KeyCountType]()
+                key_hash = hash(self.keys[int(old_slot_to_index[i] - 1)]).cast[KeyCountType]()
 
-            var key_map_index = int(key_hash & modulo_mask)
+            var slot = int(key_hash & modulo_mask)
 
             while True:
-                var key_index = int(self.key_map.load(key_map_index))
+                var key_index = int(self.slot_to_index.load(slot))
 
                 if key_index == 0:
-                    self.key_map.store(key_map_index, old_key_map[i])
+                    self.slot_to_index.store(slot, old_slot_to_index[i])
                     break
                 else:
-                    key_map_index = (key_map_index + 1) & modulo_mask
+                    slot = (slot + 1) & modulo_mask
             @parameter
             if caching_hashes:
-                key_hashes[key_map_index] = key_hash  
+                key_hashes[slot] = key_hash  
         
         @parameter
         if caching_hashes:
             self.key_hashes.free()
             self.key_hashes = key_hashes
-        old_key_map.free()
+        old_slot_to_index.free()
 
     @always_inline
     fn get[T: Keyable](inout self, key: T) raises -> List[V]:
@@ -218,14 +218,14 @@ struct MultiDict[
     fn _find_key_index(self, key_ref: KeyRef) raises -> Int:
         var key_hash = hash(key_ref).cast[KeyCountType]()
         var modulo_mask = self.capacity - 1
-        var key_map_index = int(key_hash & modulo_mask)
+        var slot = int(key_hash & modulo_mask)
         while True:
-            var key_index = int(self.key_map.load(key_map_index))
+            var key_index = int(self.slot_to_index.load(slot))
             if key_index == 0:
                 return key_index
             @parameter
             if caching_hashes:
-                var other_key_hash = self.key_hashes[key_map_index]
+                var other_key_hash = self.key_hashes[slot]
                 if key_hash == other_key_hash:
                     var other_key = self.keys[key_index - 1]
                     if eq(other_key, key_ref):
@@ -234,14 +234,14 @@ struct MultiDict[
                 var other_key = self.keys[key_index - 1]
                 if eq(other_key, key_ref):
                     return key_index
-            key_map_index = (key_map_index + 1) & modulo_mask
+            slot = (slot + 1) & modulo_mask
 
     fn debug(self) raises:
         print("Dict count:", self.count, "and capacity:", self.capacity)
         print("KeyMap:")
         for i in range(self.capacity):
             var end = ", " if i < self.capacity - 1 else ""
-            print(self.key_map.load(i), end=end)
+            print(self.slot_to_index.load(i), end=end)
         print("Keys:")
         self.keys.print_keys()
         @parameter
@@ -249,7 +249,7 @@ struct MultiDict[
             print("KeyHashes:")
             for i in range(self.capacity):
                 var end = ", " if i < self.capacity - 1 else ""
-                if self.key_map.load(i) > 0:
+                if self.slot_to_index.load(i) > 0:
                     print(self.key_hashes.load(i), end=end)
                 else:
                     print(0, end=end)

@@ -57,7 +57,20 @@ fn test_add_vs_update() raises:
     assert_equal(d.put(StringKey("a"), 4), False)
     assert_equal(d.get(StringKey("a"), 0), 4)
 
+fn test_clear() raises:
+    var d = Dict[Int]()
+    assert_equal(d.put(StringKey("a"), 1), True)
+    assert_equal(d.put(StringKey("b"), 1), True)
+    assert_equal(d.put(StringKey("a"), 2), False)
+    assert_equal(d.get(StringKey("a"), 0), 2)
+    d.clear()
+    assert_equal(d.put(StringKey("a"), 3), True)
+    assert_equal(d.get(StringKey("a"), 0), 3)
+    assert_equal(d.get(StringKey("b"), 0), 0)
+
+
 
 fn main() raises:
     test_person_dict()
     test_add_vs_update()
+    test_clear()

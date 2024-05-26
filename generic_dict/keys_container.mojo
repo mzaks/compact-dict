@@ -141,6 +141,10 @@ struct KeysContainer[KeyEndType: DType = DType.uint32](Sized, KeysBuilder):
         return KeyRef(self.keys.offset(start), length)
 
     @always_inline
+    fn clear(inout self):
+        self.count = 0
+
+    @always_inline
     fn __getitem__(self, index: Int) raises -> KeyRef:
         return self.get(index)
 

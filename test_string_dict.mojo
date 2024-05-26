@@ -100,8 +100,21 @@ fn test_upsert() raises:
     # for i in range(len(corpus)):
     #     d2.upsert(corpus[i], inc2) 
 
+fn test_clear() raises:
+    var d = Dict[Int]()
+    d.put("a", 1)
+    d.put("b", 1)
+    assert_equal(d.get("a", 0), 1)
+    assert_equal(d.get("b", 0), 1)
+    d.clear()
+    d.put("a", 2)
+    assert_equal(d.get("a", 0), 2)
+    assert_equal(d.get("b", 0), 0)
+
+
 fn main()raises:
     test_simple_manipulations()
     test_simple_manipulations_on_non_destructive()
     test_simple_manipulations_non_caching()
     test_upsert()
+    test_clear()

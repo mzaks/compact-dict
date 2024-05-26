@@ -77,17 +77,19 @@ fn test_simple_manipulations_non_caching() raises:
 
     _ = d
 
+@value
+struct MyInt:
+    var value: Int
 
-# TODO: File a compiler bug
-# fn test_upsert() raises:
-#     var d = Dict[Int32, KeyCountType=DType.uint8, KeyOffsetType=DType.uint16]()
-#     var corpus = s3_action_names()
+fn test_upsert() raises:
+    var d = Dict[MyInt, KeyCountType=DType.uint8, KeyOffsetType=DType.uint16]()
+    var corpus = s3_action_names()
     
-#     fn inc(value: Int32) -> Int32:
-#         return value + 1
+    fn inc(value: Optional[MyInt]) -> MyInt:
+        return MyInt(value.or_else(MyInt(0)).value + 1)
 
-#     for i in range(len(corpus)):
-#         d.upsert(corpus[i], 1, inc)
+    for i in range(len(corpus)):
+        d.upsert(corpus[i], inc)
 
 fn main()raises:
     test_simple_manipulations()

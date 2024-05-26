@@ -18,7 +18,7 @@ struct StringKey(KeyElement, Keyable):
         self.s = String(s)
 
     fn __hash__(self) -> Int:
-        var ptr = self.s._as_ptr()
+        var ptr = self.s.unsafe_uint8_ptr()
         return hash(ptr, len(self.s))
 
     fn __eq__(self, other: Self) -> Bool:
@@ -28,7 +28,7 @@ struct StringKey(KeyElement, Keyable):
         return self.s != other.s
 
     fn accept[T: KeysBuilder](self, inout keys_builder: T):
-        keys_builder.add_buffer(self.s._as_ptr(), len(self.s))
+        keys_builder.add_buffer(self.s.unsafe_uint8_ptr(), len(self.s))
 
 fn corpus_stats(corpus: List[String]):
     print("=======Corpus Stats=======")

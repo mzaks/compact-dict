@@ -1,4 +1,4 @@
-from math.bit import bit_length, ctpop
+from bit import pop_count, bit_width
 from memory import memset_zero, memcpy
 from collections import List
 from .string_eq import eq
@@ -34,8 +34,8 @@ struct Dict[
             self.capacity = 8
         else:
             var icapacity = Int64(capacity)
-            self.capacity = capacity if ctpop(icapacity) == 1 else
-                            1 << int(bit_length(icapacity))
+            self.capacity = capacity if pop_count(icapacity) == 1 else
+                            1 << int(bit_width(icapacity))
         self.keys = KeysContainer[KeyOffsetType](capacity)
         @parameter
         if caching_hashes:
@@ -50,7 +50,7 @@ struct Dict[
             self.deleted_mask = DTypePointer[DType.uint8].alloc(self.capacity >> 3)
             memset_zero(self.deleted_mask, self.capacity >> 3)
         else:
-            self.deleted_mask = DTypePointer[DType.uint8].alloc(0)            
+            self.deleted_mask = DTypePointer[DType.uint8].alloc(0)
 
     fn __copyinit__(inout self, existing: Self):
         self.count = existing.count
@@ -194,13 +194,15 @@ struct Dict[
 
             var key_map_index = int(key_hash & modulo_mask)
 
-            var searching = True
-            while searching:
+            # var searching = True
+            while True:
                 var key_index = int(self.key_map.load(key_map_index))
 
                 if key_index == 0:
                     self.key_map.store(key_map_index, old_key_map[i])
-                    searching = False
+                    break
+                    # searching = False
+
                 else:
                     key_map_index = (key_map_index + 1) & modulo_mask
             @parameter

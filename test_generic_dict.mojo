@@ -9,7 +9,7 @@ struct Person(Keyable):
     var age: Int
 
     fn accept[T: KeysBuilder](self, inout keys_builder: T):
-        keys_builder.add_buffer[DType.int8](self.name._as_ptr(), len(self.name))
+        keys_builder.add_buffer[DType.int8](self.name.unsafe_ptr(), len(self.name))
         keys_builder.add(Int64(self.age))
 
 fn test_person_dict() raises:
@@ -46,7 +46,7 @@ struct StringKey(Keyable):
         self.s = String(s)
 
     fn accept[T: KeysBuilder](self, inout keys_builder: T):
-        keys_builder.add_buffer(self.s._as_ptr(), len(self.s))
+        keys_builder.add_buffer(self.s.unsafe_ptr(), len(self.s))
 
 fn test_add_vs_update() raises:
     var d = Dict[Int]()

@@ -18,7 +18,7 @@ struct StringKey(KeyElement, Keyable):
         self.s = String(s)
 
     fn __hash__(self) -> Int:
-        var ptr = self.s._as_ptr()
+        var ptr = self.s.unsafe_uint8_ptr()
         return hash(ptr, len(self.s))
 
     fn __eq__(self, other: Self) -> Bool:
@@ -28,7 +28,7 @@ struct StringKey(KeyElement, Keyable):
         return self.s != other.s
 
     fn accept[T: KeysBuilder](self, inout keys_builder: T):
-        keys_builder.add_buffer(self.s._as_ptr(), len(self.s))
+        keys_builder.add_buffer(self.s.unsafe_uint8_ptr(), len(self.s))
 
 fn corpus_stats(corpus: List[String]):
     print("=======Corpus Stats=======")
@@ -68,7 +68,7 @@ fn main() raises:
         # var d = Dict[Int]()
         for i in range(len(corpus)):
             try:
-                d.put(StringKey(corpus[i]), i)
+                _ = d.put(StringKey(corpus[i]), i)
             except:
                 print("!!!")
         d1 = d^
@@ -151,18 +151,16 @@ fn main() raises:
 
     print("+++++++Read After Delete Dict Benchmark+++++++")
 
-    # TODO: read after delete seems to be buggy now, probably in std lib
+    var read_after_delete_compact_stats = benchmark.run[read_compact_dict](max_runtime_secs=0.5)
+    var read_after_delete_std_stats = benchmark.run[read_std_dict](max_runtime_secs=0.5)
 
-    # var read_after_delete_compact_stats = benchmark.run[read_compact_dict](max_runtime_secs=0.5)
-    # var read_after_delete_std_stats = benchmark.run[read_std_dict](max_runtime_secs=0.5)
+    print("Compact read after delete speedup:", read_after_delete_std_stats.mean() / read_after_delete_compact_stats.mean())
 
-    # print("Compact read after delete speedup:", read_after_delete_std_stats.mean() / read_after_delete_compact_stats.mean())
+    print("Sum1:", sum1, "length:", len(d1))
+    print("Sum2:", sum2, "length:", len(d2))
 
-    # print("Sum1:", sum1, "length:", len(d1))
-    # print("Sum2:", sum2, "length:", len(d2))
-
-    # assert_equal(sum1, sum2)
-    # assert_equal(len(d1), len(d2))
+    assert_equal(sum1, sum2)
+    assert_equal(len(d1), len(d2))
 
     _ = corpus
     _ = d1^

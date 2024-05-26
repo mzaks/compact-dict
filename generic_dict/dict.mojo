@@ -1,10 +1,10 @@
-from math.bit import bit_length, ctpop
+from bit import pop_count, bit_width
 from memory import memset_zero, memcpy
 from .key_eq import eq
 from .keys_container import KeysContainer, KeyRef, Keyable
 from .ahasher import ahash
 from .single_key_builder import SingleKeyBuilder
-
+ 
 struct Dict[
     V: CollectionElement, 
     hash: fn(KeyRef) -> UInt64 = ahash,
@@ -35,8 +35,8 @@ struct Dict[
             self.capacity = 8
         else:
             var icapacity = Int64(capacity)
-            self.capacity = capacity if ctpop(icapacity) == 1 else
-                            1 << int(bit_length(icapacity))
+            self.capacity = capacity if pop_count(icapacity) == 1 else
+                            1 << int(bit_width(icapacity))
         self.keys = KeysContainer[KeyOffsetType](capacity)
         self.key_builder = SingleKeyBuilder()
         @parameter
@@ -211,13 +211,11 @@ struct Dict[
 
             var key_map_index = int(key_hash & modulo_mask)
 
-            var searching = True
-            while searching:
+            while True:
                 var key_index = int(self.key_map.load(key_map_index))
-
                 if key_index == 0:
                     self.key_map.store(key_map_index, old_key_map[i])
-                    searching = False
+                    break
                 else:
                     key_map_index = (key_map_index + 1) & modulo_mask
             @parameter

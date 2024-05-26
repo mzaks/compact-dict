@@ -164,6 +164,8 @@ fn report(name: StringLiteral, corpus: List[String], inout csv_builder: CsvBuild
     report_checksums_alignment(std_stats, compact_stats, csv_builder)
 
 fn main() raises:
+    # Crashes because of this bug https://github.com/modularml/mojo/issues/2829
+
     var csv_builder = CsvBuilder(
         "Corpus", "Number of keys", "Total bytes", "Min key", "Avg key", "Max key", 
         "Build stdlib", "Read stdlib", "Delete stdlib", "Read after delete stdlib",
@@ -179,12 +181,10 @@ fn main() raises:
     report("German", german_text_to_keys(), csv_builder)
     report("Greek", greek_text_to_keys(), csv_builder)
     report("Hebrew", hebrew_text_to_keys(), csv_builder)
-    # Bug on intel i7 Mojo 24.1.1
-    # report("Hindi", hindi_text_to_keys(), csv_builder)
+    report("Hindi", hindi_text_to_keys(), csv_builder)
     report("Japanese", japanese_long_keys(), csv_builder)
     report("l33t", l33t_text_to_keys(), csv_builder)
-    # Bug on intel i7 Mojo 24.1.1
-    # report("Russian", russian_text_to_keys(), csv_builder)
+    report("Russian", russian_text_to_keys(), csv_builder)
     report("S3", s3_action_names(), csv_builder)
     report("Words", system_words_collection(), csv_builder)
     print(csv_builder^.finish())

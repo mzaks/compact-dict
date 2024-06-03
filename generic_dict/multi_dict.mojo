@@ -5,6 +5,43 @@ from .single_key_builder import SingleKeyBuilder
 from .sparse_array import SparseArray
 from bit import pop_count, bit_width
 
+@value
+struct _ValuesIter[
+    list_mutability: Bool, //,
+    T: CollectionElement,
+    NextKeyCountType: DType,
+    list_lifetime: AnyLifetime[list_mutability].type,
+]:
+
+    alias list_type = List[T]
+
+    var current_index: Optional[Int]
+    var next_index: Optional[Int]
+    var values: Reference[Self.list_type, list_lifetime]
+    var next_values: Reference[Self.list_type, list_lifetime]
+    var next_next_values_index: Reference[SparseArray[NextKeyCountType], list_lifetime]
+    var first: Bool
+
+    fn __iter__(self) -> Self:
+        return self
+
+    fn __next__(
+        inout self,
+    ) -> Reference[T, list_lifetime]:
+        var element = self.values[].__get_ref(self.current_index.or_else(0)) if self.first else self.next_values[].__get_ref(self.current_index.or_else(0))
+        self.first = False
+        self.current_index = self.next_index
+        var next = self.next_next_values_index[].get(self.current_index.or_else(-1))
+        self.next_index = Optional(int(next.or_else(-1))) if next else None
+        return element[]
+
+    fn __len__(self) -> Int:
+        if not self.current_index:
+            return 0
+        if not self.next_index:
+            return 1
+        return 2
+
 struct MultiDict[
     V: CollectionElement, 
     hash: fn(KeyRef) -> UInt64 = ahash,
@@ -214,6 +251,18 @@ struct MultiDict[
             result.append(self.next_values[index])
             next_next_index = self.next_next_values_index.get(index)
         return result
+
+    fn get_itter[T: Keyable](inout self, key: T) raises -> _ValuesIter[V, NextKeyCountType, __lifetime_of(self)]:
+        self.key_builder.reset()
+        key.accept(self.key_builder)
+        var key_ref = self.key_builder.get_key()
+        var key_index = self._find_key_index(key_ref)
+        if key_index == 0:
+            return _ValuesIter(None, None, self.values, self.next_values, self.next_next_values_index, True)
+        var next_index = self.next_values_index.get(key_index - 1)
+        if not next_index:
+            return _ValuesIter(Optional(key_index - 1), None, self.values, self.next_values, self.next_next_values_index, True)
+        return _ValuesIter(Optional(key_index - 1), Optional(int(next_index.value())), self.values, self.next_values, self.next_next_values_index, True)
 
     fn _find_key_index(self, key_ref: KeyRef) raises -> Int:
         var key_hash = hash(key_ref).cast[KeyCountType]()

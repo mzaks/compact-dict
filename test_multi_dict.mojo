@@ -103,8 +103,49 @@ fn test_english_corpus() raises:
     assert_equal(len(d.get(StringKey("the"))), the_occurances)
     _ = d
 
+fn test_get_itter() raises:
+    var d = MultiDict[Int]()
+    d.put(StringKey("a"), 1)
+    d.put(StringKey("b"), 2)
+    d.put(StringKey("c"), 3)
+    d.put(StringKey("a"), 4)
+    d.put(StringKey("a"), 5)
+    d.put(StringKey("a"), 6)
+    d.put(StringKey("c"), 7)
+
+    var index_a = 0
+    var expected_a = List[Int](1, 4, 5, 6)
+    for v in d.get_itter(StringKey("a")):
+        assert_equal(expected_a[index_a], v[])
+        index_a += 1
+
+    assert_equal(index_a, 4)
+
+    var index_b = 0
+    var expected_b = List[Int](2)
+    for v in d.get_itter(StringKey("b")):
+        assert_equal(expected_b[index_b], v[])
+        index_b += 1
+    assert_equal(index_b, 1)
+
+    var index_c = 0
+    var expected_c = List[Int](3, 7)
+    for v in d.get_itter(StringKey("c")):
+        assert_equal(expected_c[index_c], v[])
+        index_c += 1
+    assert_equal(index_c, 2)
+
+    var index_d = 0
+    var expected_d = List[Int](2)
+    for v in d.get_itter(StringKey("d")):
+        print(v[])
+        assert_equal(expected_d[index_d], v[])
+        index_d += 1
+    assert_equal(index_d, 0)
+
 fn main()raises:
     test_add()
     test_s3_corpus()
     test_system_corpus()
     test_english_corpus()
+    test_get_itter()

@@ -1,7 +1,7 @@
 from collections.vector import InlinedFixedVector
 
 struct KeysContainer[KeyEndType: DType = DType.uint32](Sized):
-    var keys: DTypePointer[DType.int8]
+    var keys: DTypePointer[DType.uint8]
     var allocated_bytes: Int
     var keys_end: DTypePointer[KeyEndType]
     var count: Int
@@ -16,7 +16,7 @@ struct KeysContainer[KeyEndType: DType = DType.uint32](Sized):
             "KeyEndType needs to be an unsigned integer"
         ]()
         self.allocated_bytes = capacity << 3
-        self.keys = DTypePointer[DType.int8].alloc(self.allocated_bytes)
+        self.keys = DTypePointer[DType.uint8].alloc(self.allocated_bytes)
         self.keys_end = DTypePointer[KeyEndType].alloc(capacity)
         self.count = 0
         self.capacity = capacity
@@ -25,7 +25,7 @@ struct KeysContainer[KeyEndType: DType = DType.uint32](Sized):
         self.allocated_bytes = existing.allocated_bytes
         self.count = existing.count
         self.capacity = existing.capacity
-        self.keys = DTypePointer[DType.int8].alloc(self.allocated_bytes)
+        self.keys = DTypePointer[DType.uint8].alloc(self.allocated_bytes)
         memcpy(self.keys, existing.keys, self.allocated_bytes)
         self.keys_end = DTypePointer[KeyEndType].alloc(self.allocated_bytes)
         memcpy(self.keys_end, existing.keys_end, self.capacity)
@@ -53,12 +53,12 @@ struct KeysContainer[KeyEndType: DType = DType.uint32](Sized):
             needs_realocation = True
 
         if needs_realocation:
-            var keys = DTypePointer[DType.int8].alloc(self.allocated_bytes)
+            var keys = DTypePointer[DType.uint8].alloc(self.allocated_bytes)
             memcpy(keys, self.keys, int(prev_end))
             self.keys.free()
             self.keys = keys
         
-        memcpy(self.keys.offset(prev_end), key.unsafe_ptr(), key_length)
+        memcpy(self.keys.offset(prev_end), DTypePointer(key.unsafe_ptr()), key_length)
         var count = self.count + 1
         if count >= self.capacity:
             var new_capacity = self.capacity + (self.capacity >> 1)

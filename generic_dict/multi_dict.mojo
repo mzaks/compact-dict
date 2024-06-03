@@ -141,10 +141,10 @@ struct MultiDict[
         if not next_index:
             self.next_values_index[key_index - 1] = len(self.next_values) - 1
         else:
-            var index = int(next_index.value()[])
+            var index = int(next_index.value())
             var next_next_index = self.next_next_values_index.get(index)
             while next_next_index:
-                index = int(next_next_index.value()[])
+                index = int(next_next_index.value())
                 next_next_index = self.next_next_values_index.get(index)
             self.next_next_values_index[index] = len(self.next_values) - 1
         self.keys.drop_last()
@@ -206,11 +206,11 @@ struct MultiDict[
         var next_index = self.next_values_index.get(key_index - 1)
         if not next_index:
             return result
-        var index = int(next_index.value()[])
+        var index = int(next_index.value())
         result.append(self.next_values[index])
         var next_next_index = self.next_next_values_index.get(index)
         while next_next_index:
-            index = int(next_next_index.value()[])
+            index = int(next_next_index.value())
             result.append(self.next_values[index])
             next_next_index = self.next_next_values_index.get(index)
         return result

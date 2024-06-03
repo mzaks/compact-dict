@@ -1,6 +1,6 @@
 # This code is based on https://github.com/tkaitchuck/aHash
 
-from bit import rotate_bits_left, byte_reverse
+from bit import rotate_bits_left, byte_swap
 
 alias U256 = SIMD[DType.uint64, 4]
 alias U128 = SIMD[DType.uint64, 2]
@@ -10,9 +10,9 @@ alias ROT = 23
 
 @always_inline
 fn folded_multiply(s: UInt64, by: UInt64) -> UInt64:
-    var b1 = s * byte_reverse(by)
-    var b2 = byte_reverse(s) * (~by)
-    return b1 ^ byte_reverse(b2)
+    var b1 = s * byte_swap(by)
+    var b2 = byte_swap(s) * (~by)
+    return b1 ^ byte_swap(b2)
 
 
 @always_inline
@@ -89,7 +89,7 @@ struct AHasher:
 @always_inline
 fn ahash(s: String) -> UInt64:
     var length = len(s)
-    var b = s.unsafe_uint8_ptr()
+    var b = s.unsafe_ptr()
     var hasher = AHasher(U256(0, 0, 0, 0))
 
     if length > 8:

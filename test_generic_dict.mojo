@@ -9,7 +9,7 @@ struct Person(Keyable):
     var age: Int
 
     fn accept[T: KeysBuilder](self, inout keys_builder: T):
-        keys_builder.add_buffer[DType.int8](self.name.unsafe_ptr(), len(self.name))
+        keys_builder.add_buffer[DType.uint8](self.name.unsafe_ptr(), len(self.name))
         keys_builder.add(Int64(self.age))
 
 fn test_person_dict() raises:
@@ -46,7 +46,21 @@ struct StringKey(Keyable):
         self.s = String(s)
 
     fn accept[T: KeysBuilder](self, inout keys_builder: T):
+        alias type_prefix = "String:"
+        keys_builder.add_buffer(type_prefix.unsafe_ptr(), len(type_prefix))
         keys_builder.add_buffer(self.s.unsafe_ptr(), len(self.s))
+
+@value 
+struct IntKey(Keyable):
+    var i: Int
+
+    fn __init__(inout self, i: Int):
+        self.i = i
+
+    fn accept[T: KeysBuilder](self, inout keys_builder: T):
+        alias type_prefix = "Int:"
+        keys_builder.add_buffer(type_prefix.unsafe_ptr(), len(type_prefix))
+        keys_builder.add(Int64(self.i))
 
 fn test_add_vs_update() raises:
     var d = Dict[Int]()
@@ -68,9 +82,16 @@ fn test_clear() raises:
     assert_equal(d.get(StringKey("a"), 0), 3)
     assert_equal(d.get(StringKey("b"), 0), 0)
 
+fn test_no_key_collision() raises:
+    var d = Dict[Int]()
+    assert_equal(d.put(StringKey("a"), 1), True)
+    assert_equal(d.put(IntKey(97), 2), True)
+    assert_equal(d.get(StringKey("a"), 0), 1)
+    assert_equal(d.get(IntKey(97), 0), 2)
 
 
 fn main() raises:
     test_person_dict()
     test_add_vs_update()
     test_clear()
+    test_no_key_collision()

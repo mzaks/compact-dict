@@ -11,7 +11,7 @@ struct KeyRef(Stringable):
     var size: Int
 
     fn __str__(self) -> String:
-        var result = String("(") + String(self.size) + (")")
+        var result = String("(") + str(self.size) + (")")
         for i in range(self.size):
             result += lookup[int(self.pointer.load(i) >> 4)]
             result += lookup[int(self.pointer.load(i) & 0xf)]

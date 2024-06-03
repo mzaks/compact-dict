@@ -14,7 +14,7 @@ struct StringKey(Keyable):
         self.s = String(s)
 
     fn accept[T: KeysBuilder](self, inout keys_builder: T):
-        keys_builder.add_buffer(self.s.unsafe_uint8_ptr(), len(self.s))
+        keys_builder.add_buffer(self.s.unsafe_ptr(), len(self.s))
 
 fn test_add() raises:
     var d = MultiDict[Int]()

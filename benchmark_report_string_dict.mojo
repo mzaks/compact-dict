@@ -28,7 +28,7 @@ fn report_std_benchmarks(corpus: List[String], inout csv_builder: CsvBuilder) ->
             d[corpus[i]] = i
         std_dict = d^
     var build_stats = benchmark.run[build_dict](max_runtime_secs=0.5)
-    csv_builder.push(build_stats.mean("ns"), False)
+    csv_builder.push(str(build_stats.mean("ns")), False)
     benchmark_data.reports.append(build_stats)
 
     var sum = 0
@@ -42,7 +42,7 @@ fn report_std_benchmarks(corpus: List[String], inout csv_builder: CsvBuilder) ->
                 sum += -1
 
     var read_stats = benchmark.run[read_dict](max_runtime_secs=0.5)
-    csv_builder.push(read_stats.mean("ns"), False)
+    csv_builder.push(str(read_stats.mean("ns")), False)
     benchmark_data.reports.append(read_stats)
     benchmark_data.read_checksums.append(sum)
 
@@ -56,13 +56,15 @@ fn report_std_benchmarks(corpus: List[String], inout csv_builder: CsvBuilder) ->
                     pass
     
     var delete_stats = benchmark.run[delete_dict](max_runtime_secs=0.5)
-    csv_builder.push(delete_stats.mean("ns"), False)
+    csv_builder.push(str(delete_stats.mean("ns")), False)
     benchmark_data.reports.append(delete_stats)
 
     var read_after_delete_stats = benchmark.run[read_dict](max_runtime_secs=0.5)
-    csv_builder.push(read_after_delete_stats.mean("ns"), False)
+    csv_builder.push(str(read_after_delete_stats.mean("ns")), False)
     benchmark_data.reports.append(read_after_delete_stats)
     benchmark_data.read_checksums.append(sum)
+
+    _ = std_dict
 
     return benchmark_data
 
@@ -77,7 +79,7 @@ fn report_compact_benchmarks(corpus: List[String], inout csv_builder: CsvBuilder
             d.put(corpus[i], i)
         dict = d^
     var build_stats_nc = benchmark.run[build_dict_nc](max_runtime_secs=0.5)
-    csv_builder.push(build_stats_nc.mean("ns"), False)
+    csv_builder.push(str(build_stats_nc.mean("ns")), False)
     benchmark_data.reports.append(build_stats_nc)
 
     @parameter
@@ -87,7 +89,7 @@ fn report_compact_benchmarks(corpus: List[String], inout csv_builder: CsvBuilder
             d.put(corpus[i], i)
         dict = d^
     var build_stats = benchmark.run[build_dict](max_runtime_secs=0.5)
-    csv_builder.push(build_stats.mean("ns"), False)
+    csv_builder.push(str(build_stats.mean("ns")), False)
     benchmark_data.reports.append(build_stats)
 
     var sum = 0
@@ -99,7 +101,7 @@ fn report_compact_benchmarks(corpus: List[String], inout csv_builder: CsvBuilder
 
     var read_stats = benchmark.run[read_dict](max_runtime_secs=0.5)
     var read_checksum = sum
-    csv_builder.push(read_stats.mean("ns"), False)
+    csv_builder.push(str(read_stats.mean("ns")), False)
     benchmark_data.reports.append(read_stats)
     benchmark_data.read_checksums.append(sum)
 
@@ -110,20 +112,20 @@ fn report_compact_benchmarks(corpus: List[String], inout csv_builder: CsvBuilder
                 dict.delete(corpus[i])
     
     var delete_stats = benchmark.run[delete_dict](max_runtime_secs=0.5)
-    csv_builder.push(delete_stats.mean("ns"), False)
+    csv_builder.push(str(delete_stats.mean("ns")), False)
     benchmark_data.reports.append(delete_stats)
 
     var read_after_delete_stats = benchmark.run[read_dict](max_runtime_secs=0.5)
     var read_after_delete_checksum = sum
 
-    csv_builder.push(read_after_delete_stats.mean("ns"), False)
+    csv_builder.push(str(read_after_delete_stats.mean("ns")), False)
     benchmark_data.reports.append(read_after_delete_stats)
     benchmark_data.read_checksums.append(sum)
-    
+    _ = dict
     return benchmark_data
 
 fn corpus_stats(corpus: List[String], inout csv_builder: CsvBuilder):
-    csv_builder.push(len(corpus), False)
+    csv_builder.push(str(len(corpus)), False)
     var min = 100000000
     var max = 0
     var sum = 0
@@ -139,21 +141,21 @@ fn corpus_stats(corpus: List[String], inout csv_builder: CsvBuilder):
         if max < len(key):
             max = len(key)
     var avg = sum / count
-    csv_builder.push(sum, False)
-    csv_builder.push(min, False)
-    csv_builder.push(avg, False)
-    csv_builder.push(max, False)
+    csv_builder.push(str(sum), False)
+    csv_builder.push(str(min), False)
+    csv_builder.push(str(avg), False)
+    csv_builder.push(str(max), False)
 
 fn report_speedup(std: BenchmarkData, compact: BenchmarkData, inout csv_builder: CsvBuilder):
-    csv_builder.push(std.reports[0].mean() / compact.reports[0].mean(), False)
-    csv_builder.push(std.reports[0].mean() / compact.reports[1].mean(), False)
-    csv_builder.push(std.reports[1].mean() / compact.reports[2].mean(), False)
-    csv_builder.push(std.reports[2].mean() / compact.reports[3].mean(), False)
-    csv_builder.push(std.reports[3].mean() / compact.reports[4].mean(), False)
+    csv_builder.push(str(std.reports[0].mean() / compact.reports[0].mean()), False)
+    csv_builder.push(str(std.reports[0].mean() / compact.reports[1].mean()), False)
+    csv_builder.push(str(std.reports[1].mean() / compact.reports[2].mean()), False)
+    csv_builder.push(str(std.reports[2].mean() / compact.reports[3].mean()), False)
+    csv_builder.push(str(std.reports[3].mean() / compact.reports[4].mean()), False)
 
 fn report_checksums_alignment(std: BenchmarkData, compact: BenchmarkData, inout csv_builder: CsvBuilder):
-    csv_builder.push(std.read_checksums[0] == compact.read_checksums[0], False)
-    csv_builder.push(std.read_checksums[1] == compact.read_checksums[1], False)
+    csv_builder.push(str(std.read_checksums[0] == compact.read_checksums[0]), False)
+    csv_builder.push(str(std.read_checksums[1] == compact.read_checksums[1]), False)
 
 fn report(name: StringLiteral, corpus: List[String], inout csv_builder: CsvBuilder):
     csv_builder.push(name, False)

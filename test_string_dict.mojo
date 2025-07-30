@@ -77,8 +77,8 @@ fn test_simple_manipulations_non_caching() raises:
 
     _ = d
 
-@value
-struct MyInt:
+@fieldwise_init
+struct MyInt(Copyable, Movable):
     var value: Int
 
 fn test_upsert() raises:

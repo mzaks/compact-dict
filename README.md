@@ -2,7 +2,7 @@
 
 Although the dictionary is fast (currently it is about 10x faster than the std `Dict`) its main concern is with reducing memory footprint.
 
-We introduce two self sufficient modules:
+We introduce two self-sufficient modules:
 - `string_dict` where the key type of the dictionary is a `String`
 - `generic_dict` which allows keys to be of any type conforming with `Keyable` trait
 
@@ -21,30 +21,30 @@ The `Dict` can be instantiated with a `capacity` value. Default is set to 16, mi
 from generic_dict import Dict, Keyable, KeysBuilder
 from testing import assert_equal
 
-@value
-struct Person(Keyable):
+@fieldwise_init
+struct Person(Keyable, Copyable, Movable):
     var name: String
     var age: Int
 
-    fn accept[T: KeysBuilder](self, inout keys_builder: T):
-        keys_builder.add_buffer[DType.int8](self.name._as_ptr(), len(self.name))
+    fn accept[T: KeysBuilder](self, mut keys_builder: T):
+        keys_builder.add_buffer[DType.uint8](self.name.unsafe_ptr(), len(self.name))
         keys_builder.add(Int64(self.age))
 
-fn test_person_dict() raises:
-    let p1 = Person("Maxim", 42)
-    let p2 = Person("Maximilian", 62)
-    let p3 = Person("Alex", 25)
-    let p4 = Person("Maria", 28)
-    let p5 = Person("Daria", 13)
-    let p6 = Person("Max", 31)
+fn main() raises:
+    var p1 = Person("Maxim", 42)
+    var p2 = Person("Maximilian", 62)
+    var p3 = Person("Alex", 25)
+    var p4 = Person("Maria", 28)
+    var p5 = Person("Daria", 13)
+    var p6 = Person("Max", 31)
 
     var d = Dict[Int]()
-    d.put(p1, 1)
-    d.put(p2, 11)
-    d.put(p3, 111)
-    d.put(p4, 1111)
-    d.put(p5, 11111)
-    d.put(p6, 111111)
+    _ = d.put(p1, 1)
+    _ = d.put(p2, 11)
+    _ = d.put(p3, 111)
+    _ = d.put(p4, 1111)
+    _ = d.put(p5, 11111)
+    _ = d.put(p6, 111111)
 
     assert_equal(d.get(p1, 0), 1)
     assert_equal(d.get(p2, 0), 11)
@@ -52,9 +52,23 @@ fn test_person_dict() raises:
     assert_equal(d.get(p4, 0), 1111)
     assert_equal(d.get(p5, 0), 11111)
     assert_equal(d.get(p6, 0), 111111)
-
 ```
 
 ### Note:
-Due to a bug in Mojo 24.1 `generic_dict` module does not compile
-Bug report https://github.com/modularml/mojo/issues/1858 
+To run all tests and benchmarks, call:
+
+```bash
+make test
+```
+
+and
+
+```bash
+make benchmark 
+```
+
+for `memory` test you need to install `words` package proper for your distro: https://unix.stackexchange.com/questions/213628/where-do-the-words-in-usr-share-dict-words-come-from/798355#798355
+
+```bash
+make memory 
+```

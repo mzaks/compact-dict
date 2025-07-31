@@ -1,13 +1,14 @@
 from collections.vector import InlinedFixedVector
+from memory import memcpy
 
 struct KeysContainer[KeyEndType: DType = DType.uint32](Sized):
-    var keys: DTypePointer[DType.uint8]
+    var keys: UnsafePointer[UInt8]
     var allocated_bytes: Int
-    var keys_end: DTypePointer[KeyEndType]
+    var keys_end: UnsafePointer[Scalar[KeyEndType]]
     var count: Int
     var capacity: Int
 
-    fn __init__(inout self, capacity: Int):
+    fn __init__(out self, capacity: Int):
         constrained[
             KeyEndType == DType.uint8 or 
             KeyEndType == DType.uint16 or 
@@ -16,21 +17,21 @@ struct KeysContainer[KeyEndType: DType = DType.uint32](Sized):
             "KeyEndType needs to be an unsigned integer"
         ]()
         self.allocated_bytes = capacity << 3
-        self.keys = DTypePointer[DType.uint8].alloc(self.allocated_bytes)
-        self.keys_end = DTypePointer[KeyEndType].alloc(capacity)
+        self.keys = UnsafePointer[UInt8].alloc(self.allocated_bytes)
+        self.keys_end = UnsafePointer[Scalar[KeyEndType]].alloc(capacity)
         self.count = 0
         self.capacity = capacity
 
-    fn __copyinit__(inout self, existing: Self):
+    fn __copyinit__(out self, existing: Self):
         self.allocated_bytes = existing.allocated_bytes
         self.count = existing.count
         self.capacity = existing.capacity
-        self.keys = DTypePointer[DType.uint8].alloc(self.allocated_bytes)
+        self.keys = UnsafePointer[UInt8].alloc(self.allocated_bytes)
         memcpy(self.keys, existing.keys, self.allocated_bytes)
-        self.keys_end = DTypePointer[KeyEndType].alloc(self.allocated_bytes)
+        self.keys_end = UnsafePointer[Scalar[KeyEndType]].alloc(self.allocated_bytes)
         memcpy(self.keys_end, existing.keys_end, self.capacity)
 
-    fn __moveinit__(inout self, owned existing: Self):
+    fn __moveinit__(out self, owned existing: Self):
         self.allocated_bytes = existing.allocated_bytes
         self.count = existing.count
         self.capacity = existing.capacity
@@ -42,7 +43,7 @@ struct KeysContainer[KeyEndType: DType = DType.uint32](Sized):
         self.keys_end.free()
 
     @always_inline
-    fn add(inout self, key: String):
+    fn add(mut self, key: String):
         var prev_end = 0 if self.count == 0 else self.keys_end[self.count - 1]
         var key_length = len(key)
         var new_end = prev_end + key_length
@@ -53,16 +54,16 @@ struct KeysContainer[KeyEndType: DType = DType.uint32](Sized):
             needs_realocation = True
 
         if needs_realocation:
-            var keys = DTypePointer[DType.uint8].alloc(self.allocated_bytes)
-            memcpy(keys, self.keys, int(prev_end))
+            var keys = UnsafePointer[UInt8].alloc(self.allocated_bytes)
+            memcpy(keys, self.keys, Int(prev_end))
             self.keys.free()
             self.keys = keys
         
-        memcpy(self.keys.offset(prev_end), DTypePointer(key.unsafe_ptr()), key_length)
+        memcpy(self.keys.offset(prev_end), UnsafePointer(key.unsafe_ptr()), key_length)
         var count = self.count + 1
         if count >= self.capacity:
             var new_capacity = self.capacity + (self.capacity >> 1)
-            var keys_end = DTypePointer[KeyEndType].alloc(self.allocated_bytes)
+            var keys_end = UnsafePointer[Scalar[KeyEndType]].alloc(self.allocated_bytes)
             memcpy(keys_end, self.keys_end, self.capacity)
             self.keys_end.free()
             self.keys_end = keys_end
@@ -73,27 +74,27 @@ struct KeysContainer[KeyEndType: DType = DType.uint32](Sized):
 
 
     @always_inline
-    fn get(self, index: Int) -> StringRef:
+    fn get(self, index: Int) -> StringSlice[StaticConstantOrigin]:
         if index < 0 or index >= self.count:
             return ""
-        var start = 0 if index == 0 else int(self.keys_end[index - 1])
-        var length = int(self.keys_end[index]) - start
-        return StringRef(self.keys.offset(start), length)
+        var start = 0 if index == 0 else Int(self.keys_end[index - 1])
+        var length = Int(self.keys_end[index]) - start
+        return StringSlice[StaticConstantOrigin](ptr=self.keys.offset(start), length=length)
 
     @always_inline
-    fn clear(inout self):
+    fn clear(mut self):
         self.count = 0
 
     @always_inline
-    fn __getitem__(self, index: Int) -> StringRef:
+    fn __getitem__(self, index: Int) -> StringSlice[StaticConstantOrigin]:
         return self.get(index)
 
     @always_inline
     fn __len__(self) -> Int:
         return self.count
 
-    fn keys_vec(self) -> InlinedFixedVector[StringRef]:
-        var keys = InlinedFixedVector[StringRef](self.count)
+    fn keys_vec(self) -> InlinedFixedVector[StringSlice[StaticConstantOrigin]]:
+        var keys = InlinedFixedVector[StringSlice[StaticConstantOrigin]](self.count)
         for i in range(self.count):
             keys.append(self[i])
         return keys

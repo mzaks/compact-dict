@@ -1,10 +1,10 @@
 @always_inline
-fn eq(a: StringRef, b: String) -> Bool:
+fn eq(a: String, b: String) -> Bool:
     var l = len(a)
     if l != len(b):
         return False
-    var p1 = DTypePointer(a.data)
-    var p2 = DTypePointer(b.unsafe_ptr())
+    var p1 = UnsafePointer(a.unsafe_ptr())
+    var p2 = UnsafePointer(b.unsafe_ptr())
     var offset = 0
     alias step = 16
     while l - offset >= step and (p1.load[width=step](offset) == p2.load[width=step](offset)).reduce_and():

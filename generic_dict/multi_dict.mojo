@@ -4,36 +4,37 @@ from .keys_container import KeyRef, KeysContainer
 from .single_key_builder import SingleKeyBuilder
 from .sparse_array import SparseArray
 from bit import pop_count, bit_width
+from memory import memset_zero, memcpy
 
-@value
+@fieldwise_init
 struct _ValuesIter[
     list_mutability: Bool, //,
-    T: CollectionElement,
+    T: Copyable & Movable,
     NextKeyCountType: DType,
-    list_lifetime: AnyLifetime[list_mutability].type,
-]:
-
-    alias list_type = List[T]
-
+    list_lifetime: Origin[list_mutability],
+](Copyable, Movable):
     var current_index: Optional[Int]
     var next_index: Optional[Int]
-    var values: Reference[Self.list_type, list_lifetime]
-    var next_values: Reference[Self.list_type, list_lifetime]
-    var next_next_values_index: Reference[SparseArray[NextKeyCountType], list_lifetime]
+    var values: List[T]
+    var next_values: List[T]
+    var next_next_values_index: SparseArray[NextKeyCountType]
     var first: Bool
 
     fn __iter__(self) -> Self:
         return self
 
     fn __next__(
-        inout self,
-    ) -> Reference[T, list_lifetime]:
-        var element = self.values[].__get_ref(self.current_index.or_else(0)) if self.first else self.next_values[].__get_ref(self.current_index.or_else(0))
+        mut self,
+    ) -> T:
+        var element = self.values[self.current_index.or_else(0)] if self.first else self.next_values[self.current_index.or_else(0)]
         self.first = False
         self.current_index = self.next_index
-        var next = self.next_next_values_index[].get(self.current_index.or_else(-1))
-        self.next_index = Optional(int(next.or_else(-1))) if next else None
-        return element[]
+        var next = self.next_next_values_index.get(self.current_index.or_else(-1))
+        self.next_index = Optional(Int(next.or_else(-1))) if next else None
+        return element
+
+    fn __has_next__(self) -> Bool:
+        return self.current_index.or_else(-1) >= 0
 
     fn __len__(self) -> Int:
         if not self.current_index:
@@ -43,7 +44,7 @@ struct _ValuesIter[
         return 2
 
 struct MultiDict[
-    V: CollectionElement, 
+    V: Copyable & Movable,
     hash: fn(KeyRef) -> UInt64 = ahash,
     KeyCountType: DType = DType.uint32,
     NextKeyCountType: DType = DType.uint16,
@@ -51,17 +52,17 @@ struct MultiDict[
     caching_hashes: Bool = True,
 ](Sized):
     var keys: KeysContainer[KeyOffsetType]
-    var key_hashes: DTypePointer[KeyCountType]
+    var key_hashes: UnsafePointer[Scalar[KeyCountType]]
     var values: List[V]
     var next_values_index: SparseArray[NextKeyCountType]
     var next_values: List[V]
     var next_next_values_index: SparseArray[NextKeyCountType]
-    var slot_to_index: DTypePointer[KeyCountType]
+    var slot_to_index: UnsafePointer[Scalar[KeyCountType]]
     var count: Int
     var capacity: Int
     var key_builder: SingleKeyBuilder
 
-    fn __init__(inout self, capacity: Int = 16):
+    fn __init__(out self, capacity: Int = 16):
         constrained[
             KeyCountType == DType.uint8 or 
             KeyCountType == DType.uint16 or 
@@ -82,41 +83,41 @@ struct MultiDict[
         else:
             var icapacity = Int64(capacity)
             self.capacity = capacity if pop_count(icapacity) == 1 else
-                            1 << int(bit_width(icapacity))
+                            1 << Int(bit_width(icapacity))
         self.keys = KeysContainer[KeyOffsetType](capacity)
         self.key_builder = SingleKeyBuilder()
         @parameter
         if caching_hashes:
-            self.key_hashes = DTypePointer[KeyCountType].alloc(self.capacity)
+            self.key_hashes = UnsafePointer[Scalar[KeyCountType]].alloc(self.capacity)
         else:
-            self.key_hashes = DTypePointer[KeyCountType].alloc(0)
+            self.key_hashes = UnsafePointer[Scalar[KeyCountType]].alloc(0)
         self.values = List[V](capacity=capacity)
-        self.slot_to_index = DTypePointer[KeyCountType].alloc(self.capacity)
+        self.slot_to_index = UnsafePointer[Scalar[KeyCountType]].alloc(self.capacity)
         memset_zero(self.slot_to_index, self.capacity)
         #TODO: Think about having an optional here or an empty List
         self.next_values = List[V]()
         self.next_values_index = SparseArray[NextKeyCountType]()
         self.next_next_values_index = SparseArray[NextKeyCountType]()
 
-    fn __copyinit__(inout self, existing: Self):
+    fn __copyinit__(out self, existing: Self):
         self.count = existing.count
         self.capacity = existing.capacity
         self.keys = existing.keys
-        self.key_builder = self.key_builder
+        self.key_builder = existing.key_builder
         @parameter
         if caching_hashes:
-            self.key_hashes = DTypePointer[KeyCountType].alloc(self.capacity)
+            self.key_hashes = UnsafePointer[Scalar[KeyCountType]].alloc(self.capacity)
             memcpy(self.key_hashes, existing.key_hashes, self.capacity)
         else:
-            self.key_hashes = DTypePointer[KeyCountType].alloc(0)
+            self.key_hashes = UnsafePointer[Scalar[KeyCountType]].alloc(0)
         self.values = existing.values
-        self.slot_to_index = DTypePointer[KeyCountType].alloc(self.capacity)
+        self.slot_to_index = UnsafePointer[Scalar[KeyCountType]].alloc(self.capacity)
         memcpy(self.slot_to_index, existing.slot_to_index, self.capacity)
         self.next_values = existing.next_values
         self.next_values_index = existing.next_values_index 
         self.next_next_values_index = existing.next_next_values_index 
 
-    fn __moveinit__(inout self, owned existing: Self):
+    fn __moveinit__(out self, owned existing: Self):
         self.count = existing.count
         self.capacity = existing.capacity
         self.keys = existing.keys^
@@ -135,7 +136,7 @@ struct MultiDict[
     fn __len__(self) -> Int:
         return self.count
 
-    fn put[T: Keyable](inout self, key: T, value: V) raises:
+    fn put[T: Keyable](mut self, key: T, value: V) raises:
         if self.count / self.capacity >= 0.87:
             self._rehash()
         key.accept(self.keys)
@@ -144,9 +145,9 @@ struct MultiDict[
 
         var key_hash = hash(key_ref).cast[KeyCountType]()
         var modulo_mask = self.capacity - 1
-        var slot = int(key_hash & modulo_mask)
+        var slot = Int(key_hash & modulo_mask)
         while True:
-            var key_index = int(self.slot_to_index.load(slot))
+            var key_index = Int(self.slot_to_index.load(slot))
             if key_index == 0:
                 @parameter
                 if caching_hashes:
@@ -172,32 +173,32 @@ struct MultiDict[
             slot = (slot + 1) & modulo_mask
 
     @always_inline
-    fn _add_next(inout self, value: V, key_index: Int):
+    fn _add_next(mut self, value: V, key_index: Int):
         self.next_values.append(value)
         var next_index = self.next_values_index.get(key_index - 1)
         if not next_index:
             self.next_values_index[key_index - 1] = len(self.next_values) - 1
         else:
-            var index = int(next_index.value())
+            var index = Int(next_index.value())
             var next_next_index = self.next_next_values_index.get(index)
             while next_next_index:
-                index = int(next_next_index.value())
+                index = Int(next_next_index.value())
                 next_next_index = self.next_next_values_index.get(index)
             self.next_next_values_index[index] = len(self.next_values) - 1
         self.keys.drop_last()
 
     @always_inline
-    fn _rehash(inout self) raises:
+    fn _rehash(mut self) raises:
         var old_slot_to_index = self.slot_to_index
         var old_capacity = self.capacity
         self.capacity <<= 1
-        self.slot_to_index = DTypePointer[KeyCountType].alloc(self.capacity)
+        self.slot_to_index = UnsafePointer[Scalar[KeyCountType]].alloc(self.capacity)
         memset_zero(self.slot_to_index, self.capacity)
         
         var key_hashes = self.key_hashes
         @parameter
         if caching_hashes:
-            key_hashes = DTypePointer[KeyCountType].alloc(self.capacity)
+            key_hashes = UnsafePointer[Scalar[KeyCountType]].alloc(self.capacity)
             
         var modulo_mask = self.capacity - 1
         for i in range(old_capacity):
@@ -208,12 +209,12 @@ struct MultiDict[
             if caching_hashes:
                 key_hash = self.key_hashes[i]
             else:
-                key_hash = hash(self.keys[int(old_slot_to_index[i] - 1)]).cast[KeyCountType]()
+                key_hash = hash(self.keys[Int(old_slot_to_index[i] - 1)]).cast[KeyCountType]()
 
-            var slot = int(key_hash & modulo_mask)
+            var slot = Int(key_hash & modulo_mask)
 
             while True:
-                var key_index = int(self.slot_to_index.load(slot))
+                var key_index = Int(self.slot_to_index.load(slot))
 
                 if key_index == 0:
                     self.slot_to_index.store(slot, old_slot_to_index[i])
@@ -231,7 +232,7 @@ struct MultiDict[
         old_slot_to_index.free()
 
     @always_inline
-    fn get[T: Keyable](inout self, key: T) raises -> List[V]:
+    fn get[T: Keyable](mut self, key: T) raises -> List[V]:
         var result = List[V]()
         self.key_builder.reset()
         key.accept(self.key_builder)
@@ -243,33 +244,55 @@ struct MultiDict[
         var next_index = self.next_values_index.get(key_index - 1)
         if not next_index:
             return result
-        var index = int(next_index.value())
+        var index = Int(next_index.value())
         result.append(self.next_values[index])
         var next_next_index = self.next_next_values_index.get(index)
         while next_next_index:
-            index = int(next_next_index.value())
+            index = Int(next_next_index.value())
             result.append(self.next_values[index])
             next_next_index = self.next_next_values_index.get(index)
         return result
 
-    fn get_itter[T: Keyable](inout self, key: T) raises -> _ValuesIter[V, NextKeyCountType, __lifetime_of(self)]:
+    fn get_itter[T: Keyable](mut self, key: T) raises -> _ValuesIter[V, NextKeyCountType, __origin_of(self)]:
         self.key_builder.reset()
         key.accept(self.key_builder)
         var key_ref = self.key_builder.get_key()
         var key_index = self._find_key_index(key_ref)
         if key_index == 0:
-            return _ValuesIter(None, None, self.values, self.next_values, self.next_next_values_index, True)
+            return _ValuesIter[
+                list_mutability=True,
+                T=V,
+                NextKeyCountType=NextKeyCountType,
+                list_lifetime=__origin_of(self)
+            ](
+                None,
+                None,
+                self.values,
+                self.next_values,
+                self.next_next_values_index,
+                True
+            )
         var next_index = self.next_values_index.get(key_index - 1)
         if not next_index:
-            return _ValuesIter(Optional(key_index - 1), None, self.values, self.next_values, self.next_next_values_index, True)
-        return _ValuesIter(Optional(key_index - 1), Optional(int(next_index.value())), self.values, self.next_values, self.next_next_values_index, True)
+            return _ValuesIter[
+                list_mutability=True,
+                T=V,
+                NextKeyCountType=NextKeyCountType,
+                list_lifetime=__origin_of(self)
+            ](Optional(key_index - 1), None, self.values, self.next_values, self.next_next_values_index, True)
+        return _ValuesIter[
+                list_mutability=True,
+                T=V,
+                NextKeyCountType=NextKeyCountType,
+                list_lifetime=__origin_of(self)
+            ](Optional(key_index - 1), Optional(Int(next_index.value())), self.values, self.next_values, self.next_next_values_index, True)
 
     fn _find_key_index(self, key_ref: KeyRef) raises -> Int:
         var key_hash = hash(key_ref).cast[KeyCountType]()
         var modulo_mask = self.capacity - 1
-        var slot = int(key_hash & modulo_mask)
+        var slot = Int(key_hash & modulo_mask)
         while True:
-            var key_index = int(self.slot_to_index.load(slot))
+            var key_index = Int(self.slot_to_index.load(slot))
             if key_index == 0:
                 return key_index
             @parameter

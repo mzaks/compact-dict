@@ -3,23 +3,22 @@ from generic_dict import Dict, Keyable, KeysBuilder
 from collections.dict import KeyElement, Dict as StdDict
 from pathlib import cwd
 from testing import assert_equal
+from hashlib.hasher import Hasher
 
 from corpora import *
 
 
-@value
-struct StringKey(KeyElement, Keyable):
+struct StringKey(KeyElement, Keyable, Copyable, Movable, Hashable, EqualityComparable):
     var s: String
 
-    fn __init__(inout self, owned s: String):
+    fn __init__(out self, owned s: String):
         self.s = s^
 
-    fn __init__(inout self, s: StringLiteral):
+    fn __init__(out self, s: StringLiteral):
         self.s = String(s)
 
-    fn __hash__(self) -> Int:
-        var ptr = self.s.unsafe_ptr()
-        return hash(ptr, len(self.s))
+    fn __hash__[H: Hasher](self, mut hasher: H):
+        hasher.update(self.s)
 
     fn __eq__(self, other: Self) -> Bool:
         return self.s == other.s
@@ -27,7 +26,7 @@ struct StringKey(KeyElement, Keyable):
     fn __ne__(self, other: Self) -> Bool:
         return self.s != other.s
 
-    fn accept[T: KeysBuilder](self, inout keys_builder: T):
+    fn accept[T: KeysBuilder](self, mut keys_builder: T):
         keys_builder.add_buffer(self.s.unsafe_ptr(), len(self.s))
 
 fn corpus_stats(corpus: List[String]):
@@ -77,7 +76,7 @@ fn main() raises:
     fn build_std_dict():
         var d = StdDict[StringKey, Int]()
         for i in range(len(corpus)):
-            d[corpus[i]] = i
+            d[StringKey(corpus[i])] = i
         d2 = d^
 
     print("+++++++Create Dict Benchmark+++++++")
@@ -111,7 +110,7 @@ fn main() raises:
         sum2 = 0
         for i in range(len(corpus)):
             try:
-                sum2 += d2[corpus[i]]
+                sum2 += d2[StringKey(corpus[i])]
             except:
                 sum2 += -1
 
@@ -138,7 +137,7 @@ fn main() raises:
         for i in range(len(corpus)):
             if i % m == 0:
                 try:
-                    _ = d2.pop(corpus[i])
+                    _ = d2.pop(StringKey(corpus[i]))
                 except:
                     pass
 

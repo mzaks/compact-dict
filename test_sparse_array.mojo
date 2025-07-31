@@ -1,5 +1,4 @@
 from generic_dict import SparseArray
-from tensor import Tensor, TensorShape
 from testing import assert_equal, assert_true
 
 

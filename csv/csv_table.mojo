@@ -18,7 +18,7 @@ struct CsvTable[sep: Int = COMMA]:
     var _ends: List[Int]
     var column_count: Int
 
-    fn __init__(inout self, owned s: String, with_simd: Bool = True):
+    fn __init__(out self, owned s: String, with_simd: Bool = True):
         self._inner_string = s
         self._starts = List[Int](capacity=10)
         self._ends = List[Int](capacity=10)
@@ -29,7 +29,7 @@ struct CsvTable[sep: Int = COMMA]:
             self._parse()
 
     @always_inline
-    fn _parse(inout self):
+    fn _parse(mut self):
         var length = len(self._inner_string)
         var offset = 0
         var in_double_quotes = False
@@ -69,7 +69,7 @@ struct CsvTable[sep: Int = COMMA]:
             self._ends.append(length)
 
     @always_inline
-    fn _simd_parse(inout self):
+    fn _simd_parse(mut self):
         var p = DTypePointer(self._inner_string.unsafe_ptr())
         var string_byte_length = len(self._inner_string)
         var in_quotes = False

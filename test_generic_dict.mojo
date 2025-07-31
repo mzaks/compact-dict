@@ -3,12 +3,12 @@ from testing import assert_equal
 
 from corpora import *
 
-@value
-struct Person(Keyable):
+@fieldwise_init
+struct Person(Keyable, Copyable, Movable):
     var name: String
     var age: Int
 
-    fn accept[T: KeysBuilder](self, inout keys_builder: T):
+    fn accept[T: KeysBuilder](self, mut keys_builder: T):
         keys_builder.add_buffer[DType.uint8](self.name.unsafe_ptr(), len(self.name))
         keys_builder.add(Int64(self.age))
 
@@ -35,29 +35,27 @@ fn test_person_dict() raises:
     # assert_equal(d.get(p5, 0), 11111)
     # assert_equal(d.get(p6, 0), 111111)
 
-@value
-struct StringKey(Keyable):
+struct StringKey(Keyable, Copyable, Movable):
     var s: String
 
-    fn __init__(inout self, owned s: String):
+    fn __init__(out self, owned s: String):
         self.s = s^
 
-    fn __init__(inout self, s: StringLiteral):
+    fn __init__(out self, s: StringLiteral):
         self.s = String(s)
 
-    fn accept[T: KeysBuilder](self, inout keys_builder: T):
+    fn accept[T: KeysBuilder](self, mut keys_builder: T):
         alias type_prefix = "String:"
         keys_builder.add_buffer(type_prefix.unsafe_ptr(), len(type_prefix))
         keys_builder.add_buffer(self.s.unsafe_ptr(), len(self.s))
 
-@value 
-struct IntKey(Keyable):
+struct IntKey(Keyable, Copyable, Movable):
     var i: Int
 
-    fn __init__(inout self, i: Int):
+    fn __init__(out self, i: Int):
         self.i = i
 
-    fn accept[T: KeysBuilder](self, inout keys_builder: T):
+    fn accept[T: KeysBuilder](self, mut keys_builder: T):
         alias type_prefix = "Int:"
         keys_builder.add_buffer(type_prefix.unsafe_ptr(), len(type_prefix))
         keys_builder.add(Int64(self.i))

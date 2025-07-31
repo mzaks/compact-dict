@@ -1,11 +1,8 @@
 from algorithm.functional import vectorize
 from sys.info import simdwidthof
 from sys.intrinsics import compressed_store
-# from math import iota, reduce_bit_count, any_true
 from math import iota
 from memory import stack_allocation
-from time import now
-from collections.vector import InlinedFixedVector
 
 alias simd_width_i8 = simdwidthof[DType.int8]()
 
@@ -55,7 +52,7 @@ fn find_indices(s: String, c: String) -> List[UInt64]:
     var size = len(s)
     var result = List[UInt64]()
     var char = UInt8(ord(c))
-    var p = DTypePointer(s.unsafe_ptr())
+    var p = UnsafePointer(s.unsafe_ptr())
 
     @parameter
     fn find[simd_width: Int](offset: Int):
@@ -71,7 +68,7 @@ fn find_indices(s: String, c: String) -> List[UInt64]:
             var current_len = len(result)
             result.reserve(current_len + occurrence_count)
             result.resize(current_len + occurrence_count, 0)
-            compressed_store(offsets, DTypePointer[DType.uint64](result.data).offset(current_len), occurrence)
+            compressed_store(offsets, UnsafePointer[UInt64](to=result[current_len]), occurrence)
 
     vectorize[find, simd_width_i8](size)
     return result
@@ -80,10 +77,10 @@ fn find_indices(s: String, c: String) -> List[UInt64]:
 fn occurrence_count(s: String, *c: String) -> Int:
     var size = len(s)
     var result = 0
-    var chars = InlinedFixedVector[UInt8](len(c))
+    var chars = List[UInt8](capacity=len(c))
     for i in range(len(c)):
         chars.append(UInt8(ord(c[i])))
-    var p = DTypePointer(s.unsafe_ptr())
+    var p = UnsafePointer(s.unsafe_ptr())
 
     @parameter
     fn find[simd_width: Int](offset: Int):
@@ -109,11 +106,10 @@ fn occurrence_count(s: String, *c: String) -> Int:
 
 fn contains_any_of(s: String, *c: String) -> Bool:
     var size = len(s)
-    # var c_list: VariadicListMem[String] = c
-    var chars = InlinedFixedVector[UInt8](len(c))
+    var chars = List[UInt8](capacity=len(c))
     for i in range(len(c)):
         chars.append(UInt8(ord(c[i])))
-    var p = DTypePointer(s.unsafe_ptr())
+    var p = UnsafePointer(s.unsafe_ptr())
     var flag = False
 
     @parameter
@@ -129,11 +125,12 @@ fn contains_any_of(s: String, *c: String) -> Bool:
 
     vectorize_and_exit[simd_width_i8, find](size)
 
+    print(p)
     return flag
 
 
 @always_inline
-fn string_from_pointer(p: DTypePointer[DType.uint8], length: Int) -> String:
+fn string_from_pointer(p: UnsafePointer[UInt8], length: Int) -> String:
     # Since Mojo 0.5.0 the pointer needs to provide a 0 terminated byte string
     p.store(length - 1, 0)
     return String(p, length)

@@ -124,4 +124,4 @@ fn escape_quotes_in(s: String) -> String:
 
     var last_index = Int(indices[i_size - 1])
     memcpy(p_result.offset(offset), p_current.offset(last_index), size - last_index)
-    return string_from_pointer(p_result, size + i_size)
+    return string_from_pointer(p_result, size + i_size + 1)

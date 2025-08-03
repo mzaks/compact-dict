@@ -3,50 +3,10 @@ from sys.info import simdwidthof
 from sys.intrinsics import compressed_store
 from math import iota
 from memory import stack_allocation
+from time import now
+from .vectorize_and_exit import vectorize_and_exit
 
 alias simd_width_i8 = simdwidthof[DType.int8]()
-
-fn vectorize_and_exit[simd_width: Int, workgroup_function: fn[i: Int](Int) capturing -> Bool](size: Int):
-    var loops = size // simd_width
-    for i in range(loops):
-        if workgroup_function[simd_width](i * simd_width):
-            return
-    
-    var rest = size & (simd_width - 1)
-    @parameter
-    if simd_width >= 64:
-        if rest >= 32:
-            if workgroup_function[32](size - rest):
-                return
-            rest -= 32
-    @parameter
-    if simd_width >= 32:
-        if rest >= 16:
-            if workgroup_function[16](size - rest):
-                return
-            rest -= 16
-    @parameter
-    if simd_width >= 16:
-        if rest >= 8:
-            if workgroup_function[8](size - rest):
-                return
-            rest -= 8
-    @parameter
-    if simd_width >= 8:
-        if rest >= 4:
-            if workgroup_function[4](size - rest):
-                return
-            rest -= 4
-    @parameter
-    if simd_width >= 4:
-        if rest >= 2:
-            if workgroup_function[2](size - rest):
-                return
-            rest -= 2
-
-    if rest == 1:
-        _= workgroup_function[1](size - rest)
-
 
 fn find_indices(s: String, c: String) -> List[UInt64]:
     var size = len(s)
@@ -107,6 +67,7 @@ fn occurrence_count(s: String, *c: String) -> Int:
 fn contains_any_of(s: String, *c: String) -> Bool:
     var size = len(s)
     var chars = List[UInt8](capacity=len(c))
+
     for i in range(len(c)):
         chars.append(UInt8(ord(c[i])))
     var p = UnsafePointer(s.unsafe_ptr())
@@ -125,19 +86,17 @@ fn contains_any_of(s: String, *c: String) -> Bool:
 
     vectorize_and_exit[simd_width_i8, find](size)
 
-    print(p)
     return flag
 
 
 @always_inline
 fn string_from_pointer(p: UnsafePointer[UInt8], length: Int) -> String:
-    # Since Mojo 0.5.0 the pointer needs to provide a 0 terminated byte string
     p.store(length - 1, 0)
-    return String(p, length)
+    return String(unsafe_from_utf8_ptr=p)
 
 
 fn print_v(v: List[UInt64]):
-    print("(" +  str(len(v)) + ")[")
+    print("(" +  String(len(v)) + ")[")
     for i in range(len(v)):
         var end = ", " if i < len(v) - 1 else "]\n"
         print(v[i], end=end)

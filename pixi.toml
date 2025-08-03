@@ -1,5 +1,5 @@
 [workspace]
-authors = ["Daniel Gustaw <gustaw.daniel@gmail.com>"]
+authors = ["Maxim Zaks <maxim.zaks@gmail.com>", "Daniel Gustaw <gustaw.daniel@gmail.com>"]
 channels = ["https://conda.modular.com/max-nightly", "conda-forge"]
 name = "compact-dict"
 platforms = ["linux-64"]

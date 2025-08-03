@@ -4,7 +4,7 @@ from collections.dict import KeyElement, Dict as StdDict
 from pathlib import cwd
 from testing import assert_equal
 from csv import CsvBuilder
-from utils.progress_bar import progress_bar
+from helpers.progress_bar import progress_bar
 import os
 from corpora import *
 
@@ -208,3 +208,4 @@ fn main() raises:
     progress_bar[one_step](n=len(names), prefix="Corpus:", bar_size=40)
 
     _ = csv_builder^.finish()
+    print("\n")
